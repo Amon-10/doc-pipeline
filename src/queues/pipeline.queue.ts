@@ -1,9 +1,9 @@
-import { Queue, Worker, Job } from "bullmq";
-import IORedis from "ioredis";
+import { Queue } from "bullmq";
 
-export const connection = new IORedis(process.env.REDIS_URL || "redis://redis:6379", {
-  maxRetriesPerRequest: null,
-});
+export const connection = {
+  host: process.env.REDIS_HOST || "redis",
+  port: parseInt(process.env.REDIS_PORT || "6379"),
+};
 
 export const pipelineQueue = new Queue("pipeline", { connection });
 
