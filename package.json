@@ -20,6 +20,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "ioredis": "^5.11.0",
+    "multer": "^2.1.1",
     "nodemailer": "^8.0.9",
     "openai": "^6.39.0",
     "pdf-parse": "^2.4.5",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
     "@types/nodemailer": "^8.0.0",
     "@types/pdf-parse": "^1.1.5",
