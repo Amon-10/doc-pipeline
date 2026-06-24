@@ -54,12 +54,22 @@ router.post("/", upload.single('file'), async (req: Request, res: Response) => {
             );
 
             const document = insertToDb.rows[0];
+
+            // Insert to jobs to record job creation
+            const jobRecord = await db.query(
+               `INSERT INTO jobs (document_id, job_type, status)
+                VALUES($1, 'extract', 'pending')
+                RETURNING id`,
+                [document.id]
+            );
+
+            const jobId = jobRecord.rows[0].id;
             
             // Enqueue job to the pipeline
             await addJob({
                 documentId: document.id,
                 jobType: "extract",
-                data: { filename: document.filename },
+                data: { filename: document.filename, jobId },
             });
             
             // Return success message
