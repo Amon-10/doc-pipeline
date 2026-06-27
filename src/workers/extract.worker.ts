@@ -4,10 +4,11 @@ import path from "path";
 import { db } from "../db/client";
 import { addJob, connection } from "../queues/pipeline.queue";
 import type { JobPayload } from "../queues/pipeline.queue";
-
-const pdfParse = require("pdf-parse");
+const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require("pdf-parse");
 
 const extractWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
+    if (job.name !== 'extract') return;
+
     const documentId = job.data.documentId;
     const filename = job.data.data?.filename as string;
     const jobId = job.data.data?.jobId;
