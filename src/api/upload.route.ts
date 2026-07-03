@@ -6,19 +6,26 @@ import { addJob } from "../queues/pipeline.queue";
 
 const router = Router()
 
-// Handle file upload
-// Set destination to /uploads
-// Set filename to be file.fieldname + data + randomNum + '.pdf'
+/**  Handle file storage after upload
+* multer.diskStorage takes two properties destination and filename
+* destination - handles where uploaded files are saved -- uploads directory in this case
+* filename    - sets the name of the file with which it will be stored
+* path.extname extracts the file extension (pdf, jpg etc), multer doesn't handle this by default unfortunately
+*/
 const storage = multer.diskStorage({
     destination: (req, file, cb)  => {
         cb(null, "uploads/");
     },
     filename: (req, file, cb) => {
+        // use of timestamp + random number to prevent collision of two users upload file with same name
         cb(null, file.fieldname + '-' + Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname));
     }
 });
 
-// Filter out any file type that is not pdf
+/** 
+* Filter out any file type that is not pdf
+* cb(null, true) is for accepted files
+*/ 
 const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback): void => {
     const isPdfMime = file.mimetype === "application/pdf";
     
@@ -30,22 +37,34 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallb
     }
 };
 
-// Multer config object
+/**
+ * Multer config object
+ * Takes an options object
+ * I used the storage property instead of dest property for more control, which is to set 
+ * custom filenames and set destination for uploaded files
+ * Applied fileFilter property to only accept pdf's
+ */
 const upload = multer({ 
     storage: storage,
     fileFilter: fileFilter
 });
 
-// POST
+/**
+ * Accept upload of single files only with input field name named 'file'
+ */
 router.post("/", upload.single('file'), async (req: Request, res: Response) => {
         try {
             // Guard against no file upload
             if (!req.file) {
+                // status 400 - client sent bad request
                 res.status(400).json({error: "No file uploaded"});
                 return;
             }
             
-            // Insert to db 
+            /**
+             * Create row for the uploaded document in db in the documents table
+             * The document info returned is done so to provide client response
+             */
             const insertToDb = await db.query(
                `INSERT INTO documents (filename, original_name, status)
                 VALUES($1, $2, 'pending')
@@ -55,7 +74,9 @@ router.post("/", upload.single('file'), async (req: Request, res: Response) => {
 
             const document = insertToDb.rows[0];
 
-            // Insert to jobs to record job creation
+            /**
+             * Create row for uploaded documents first job (extract) in jobs table in db
+             */
             const jobRecord = await db.query(
                `INSERT INTO jobs (document_id, job_type, status)
                 VALUES($1, 'extract', 'pending')
@@ -63,9 +84,13 @@ router.post("/", upload.single('file'), async (req: Request, res: Response) => {
                 [document.id]
             );
 
+            /** This is the extract jobId
+             * jobId is passed through the BullMQ payload so the extract worker 
+             * can update its own jobs table row without a separate lookup query
+             */
             const jobId = jobRecord.rows[0].id;
             
-            // Enqueue job to the pipeline
+            // Enqueue job (extract) to the pipeline
             await addJob({
                 documentId: document.id,
                 jobType: "extract",
@@ -79,6 +104,7 @@ router.post("/", upload.single('file'), async (req: Request, res: Response) => {
             });
         } catch(error) {
             console.error('File upload failed', error);
+            // status 500 - unexpected server error
             return res.status(500).json({ error: 'File upload error'});
         }
 });

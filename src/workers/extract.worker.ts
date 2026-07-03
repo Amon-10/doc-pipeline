@@ -3,22 +3,25 @@ import { promises as fs } from "fs";
 import path from "path";
 import { db } from "../db/client";
 import { addJob, connection } from "../queues/pipeline.queue";
-import type { JobPayload } from "../queues/pipeline.queue";
+import type { ExtractJobData, JobPayload } from "../queues/pipeline.queue";
 const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require("pdf-parse");
 
 const extractWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
-    if (job.name !== 'extract') return;
+    if (job.name !== 'extract') return; // ignore jobs meant for other workers — all workers share the same queue
 
     const documentId = job.data.documentId;
-    const filename = job.data.data?.filename as string;
-    const jobId = job.data.data?.jobId;
+    const data = job.data.data as unknown as ExtractJobData; // typecheck as unknown and then with my custom defined type - ExtractJobData
+    const filename = data.filename
+    const jobId = data.jobId; // carries extract jobId
 
     try {
+        // check for if filename isn't found - may indicate payload wasn't constructed correctly
+        // throw error so BullMQ retries
         if(!filename) {
             throw new Error(`No filename provided for document ${documentId}`)
         }
 
-        // Update status to processing in documents
+        // Update status to processing in documents table
         await db.query(
            `UPDATE documents
             SET status = 'processing'
@@ -27,16 +30,35 @@ const extractWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
         );
         
         // Read file from disk
-        const filePath = path.join("uploads", filename);
-        const fileBuffer = await fs.readFile(filePath);
-        const pdfData = await pdfParse(fileBuffer);
+        const filePath = path.join("uploads", filename); // create path to pdf on disk
+        const fileBuffer = await fs.readFile(filePath); // extract binary pdf contents
+        const pdfData = await pdfParse(fileBuffer); // extract raw text from binary pdf contents
 
+        /**
+         * Insert and create to chunk row in jobs table
+         * return id to be used as chunk job id in chunk worker
+        */
+        const chunkJobRecord = await db.query(
+            `INSERT INTO jobs (document_id, job_type, status)
+            VALUES ($1, 'chunk', 'pending')
+            RETURNING id`,
+            [documentId]
+        );
+
+        // carries chunk jobId
+        const chunkJobId = chunkJobRecord.rows[0].id;
+
+        /**
+         * Enqueue chunk job to pipeline
+         * pass forward all pdfData as string and chunk jobId to chunk worker through the payload
+         */
         await addJob({
             documentId,
             jobType: "chunk",
-            data: { text: pdfData.text },
+            data: { text: pdfData.text, jobId: chunkJobId },
         });
 
+        // Update jobs table to signify extract job is completed and when it was completed
         await db.query(
            `UPDATE jobs
             SET completed_at = now(),
@@ -46,13 +68,17 @@ const extractWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
         )
     
     } catch(err) {
+        /**
+         * Upon error update documents table to failed for row
+         */
         await db.query(
            `UPDATE documents
             SET status = 'failed'
             WHERE id = $1`,
             [documentId]
         );
-
+        
+        // Upon error update jobs table to failed for job row
         await db.query(
            `UPDATE jobs
             SET status = 'failed',
@@ -65,4 +91,10 @@ const extractWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
         // Rethrow so BullMQ triggers retry
         throw err;
     }
-}, {connection} )
+},
+/**
+ * Passing {connection: connection} as {connection}
+ * typescript shortform
+ * basically results in connection: {host: "redis", port: 6379}
+ */
+{connection} )
