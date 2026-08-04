@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import uploadRouter from "./api/upload.route";
 import "./workers/extract.worker";
+import "./workers/chunk.worker";
 
 const app = express();
 const PORT = process.env.PORT || 3000;

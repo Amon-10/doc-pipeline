@@ -55,6 +55,13 @@ export interface ChunkJobData {
   jobId: string
 }
 
+/** Shape of job.data.data for summarize jobs. */
+export interface SummarizeJobData {
+  chunk: string;
+  jobId: string;
+  chunkIndex: number;
+}
+
 /**
  * Adds a job to the pipeline queue with automatic retry.
  *
