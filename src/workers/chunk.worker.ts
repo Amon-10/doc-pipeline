@@ -5,25 +5,27 @@ import { db } from "../db/client";
 import { chunkText } from "../lib/chunking";
 
 const chunkWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
-    if (job.name !== 'chunk') return;
-    
+    if (job.name !== 'chunk') return; // ignore jobs meant for other workers — all workers share the same queue
+
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as ChunkJobData;
     const text = data.text;
     const jobId = data.jobId; // carries chunk jobId
 
     try{
-        // check for no text
+        // missing text means the extract worker's payload wasn't constructed correctly
         if (!text) {
             throw new Error(`No text provided for document ${documentId}`)
         }
-    
-        // text chunks
+
         const chunks = chunkText(text);
 
         /**
-         * For each chunk create row in jobs table to get summarize jobId
-         * Call addJob for each chunk with it's own jobId
+         * One summarize job per chunk rather than one job holding all chunks —
+         * lets chunks be summarized in parallel and lets a single failed
+         * chunk retry independently without redoing the whole document.
+         * chunkIndex is passed through so the merge worker can reassemble
+         * summaries in the correct order later.
          */
         for (const [index, chunk] of chunks.entries()) {
             const summarizeJobRecord = await db.query(
@@ -32,17 +34,16 @@ const chunkWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
                 RETURNING id`,
                 [documentId]
             );
-            // carries summarize jobId
             const summarizeJobId = summarizeJobRecord.rows[0].id;
 
             await addJob({
                 documentId,
                 jobType: "summarize",
-                data: {chunk: chunk, jobId: summarizeJobId, chunkIndex: index},
+                data: { chunk: chunk, jobId: summarizeJobId, chunkIndex: index },
             });
         };
 
-        // Update jobs table to signify chunk job is completed and when it was completed
+        // mark the chunk job itself complete — separate from the summarize jobs it spawned
         await db.query(
            `UPDATE jobs
             SET completed_at = now(),
@@ -52,9 +53,6 @@ const chunkWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
         )
 
     } catch(err) {
-        /**
-         * Upon error update documents table to failed for row
-         */
         await db.query(
            `UPDATE documents
             SET status = 'failed'
@@ -62,7 +60,6 @@ const chunkWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
             [documentId]
         );
 
-        // Upon error update jobs table to failed for job row
         await db.query(
            `UPDATE jobs
             SET status = 'failed',
@@ -71,9 +68,8 @@ const chunkWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
             [jobId, err instanceof Error ? err.message : 'Unknown error']
         );
         console.error(err);
-        
-        // rethrow so BullMq triggers retry
-        throw err;
+
+        throw err; // rethrow so BullMQ triggers retry
     }
 
 }, {connection})
