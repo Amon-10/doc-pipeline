@@ -6,8 +6,7 @@ import { addJob, connection } from "../queues/pipeline.queue";
 import type { ExtractJobData, JobPayload } from "../queues/pipeline.queue";
 const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require("pdf-parse");
 
-const extractWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
-    if (job.name !== 'extract') return; // ignore jobs meant for other workers — all workers share the same queue
+const extractWorker = new Worker("extract", async (job: Job<JobPayload>) => {
 
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as ExtractJobData; // typecheck as unknown and then with my custom defined type - ExtractJobData

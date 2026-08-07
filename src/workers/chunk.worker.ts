@@ -4,8 +4,7 @@ import type { ChunkJobData, JobPayload } from "../queues/pipeline.queue";
 import { db } from "../db/client";
 import { chunkText } from "../lib/chunking";
 
-const chunkWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
-    if (job.name !== 'chunk') return; // ignore jobs meant for other workers — all workers share the same queue
+const chunkWorker = new Worker("chunk", async (job: Job<JobPayload>) => {
 
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as ChunkJobData;

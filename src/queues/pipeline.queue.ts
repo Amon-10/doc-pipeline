@@ -11,12 +11,6 @@ export const connection = {
 };
 
 /**
- * The BullMQ queue all pipeline jobs are added to.
- * BullMQ stores all job state for this queue under the name "pipeline" in Redis.
- */
-export const pipelineQueue = new Queue("pipeline", { connection });
-
-/**
  * Valid job names in the pipeline.
  * Restricting to this union prevents typos like "extrct" from compiling.
  */
@@ -26,6 +20,15 @@ export type JobType =
   | "summarize"
   | "merge"
   | "notify";
+
+// one dedicated queue per job type — prevents workers from competing for jobs meant for a different stage
+const queues: Record<JobType, Queue> = {
+  extract: new Queue("extract", { connection }),
+  chunk: new Queue("chunk", { connection }),
+  summarize: new Queue("summarize", { connection }),
+  merge: new Queue("merge", { connection }),
+  notify: new Queue("notify", { connection }),
+};
 
 /**
  * Shape of every job added to the pipeline queue.
@@ -72,7 +75,8 @@ export interface SummarizeJobData {
  * giving external services like OpenAI room to recover from rate limits.
  */
 export const addJob = async (payload: JobPayload) => {
-  await pipelineQueue.add(payload.jobType, payload, {
+  const queue = queues[payload.jobType];
+  await queue.add(payload.jobType, payload, {
     attempts: 3,
     backoff: {
       type: "exponential",
