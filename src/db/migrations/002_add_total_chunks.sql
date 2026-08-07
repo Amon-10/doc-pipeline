@@ -1,0 +1,1 @@
+ALTER TABLE documents ADD COLUMN total_chunks INT;
