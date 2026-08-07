@@ -20,6 +20,15 @@ const chunkWorker = new Worker("pipeline", async (job: Job<JobPayload>) => {
 
         const chunks = chunkText(text);
 
+        const totalChunks = chunks.length;
+
+        await db.query(
+            `UPDATE documents
+            SET total_chunks = $1
+            WHERE id = $2`,
+            [totalChunks, documentId]
+        );
+
         /**
          * One summarize job per chunk rather than one job holding all chunks —
          * lets chunks be summarized in parallel and lets a single failed
