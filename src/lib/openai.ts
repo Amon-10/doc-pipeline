@@ -11,11 +11,25 @@ const client = new OpenAI();
  * @param chunk - a section of extracted PDF text to summarize
  * @returns the model's summary as plain text
  */
-export async function summarizeChunk(chunk: string) : Promise<string>{
-const response = await client.responses.create({
-  model: "gpt-5.4-mini",
-  input: `Provide a concise summary for the following text: ${chunk}`,
-});
+export async function summarizeChunk(chunk: string) : Promise<string> {
+    const response = await client.responses.create({
+        model: "gpt-5.4-mini",
+        input: `Provide a concise summary for the following text: ${chunk}`,
+    });
 
-return response.output_text;
-}
+    return response.output_text;
+};
+
+/**
+ * Combines multiple chunk summaries into one coherent final summary.
+ * @param combinedText - all chunk summaries joined together
+ * @returns one unified summary reading as a single coherent piece
+ */
+export async function mergeSummaries(combinedText: string) : Promise<string>{
+    const response = await client.responses.create({
+        model: "gpt-5.4-mini",
+        input: `The following are summaries of different sections of the same document. Combine them into one single, coherent summary that reads naturally: ${combinedText}`,
+    });
+
+    return response.output_text;
+};
