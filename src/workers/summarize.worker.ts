@@ -17,8 +17,10 @@ const summarizeWorker = new Worker("summarize", async(job: Job<JobPayload>) => {
             throw new Error(`No chunk provided for document ${documentId}`);
         }
 
+        // Get chunk summary
         const chunkSummary = await summarizeChunk(chunk);
 
+        // save this chunk's summary — chunk_index preserves original order for merge later
         const summaryRecord = await db.query(
             `INSERT INTO summaries (document_id, chunk_index, content, created_at)
             VALUES ($1, $2, $3, now())
@@ -27,6 +29,16 @@ const summarizeWorker = new Worker("summarize", async(job: Job<JobPayload>) => {
         );
         const summaryId = summaryRecord.rows[0].id;
 
+        /**
+         * Fan-in check: summarize jobs run in parallel and finish in unpredictable
+         * order, so chunkIndex alone can't tell me who finishes last. Instead,
+         * compare how many summaries exist so far against total_chunks — whichever
+         * job's insert makes the count match is the one that triggers merge.
+         * Known limitation: two jobs finishing at nearly the same instant could
+         * both see the same count and both trigger merge (race condition) —
+         * acceptable for this project's scale, would need a transaction lock
+         * or atomic counter to fully close in production.
+         */
         const documentsResult = await db.query(
             `SELECT total_chunks FROM documents WHERE id = $1`,
             [documentId]
@@ -58,6 +70,7 @@ const summarizeWorker = new Worker("summarize", async(job: Job<JobPayload>) => {
             });
         };
 
+        // mark this summarize job complete regardless of whether it triggered merge
         await db.query(
             `UPDATE jobs
             SET completed_at = now(),
@@ -85,4 +98,7 @@ const summarizeWorker = new Worker("summarize", async(job: Job<JobPayload>) => {
 
         throw err; // rethrow so BullMQ triggers retry
     }
+    // concurrency: 5 lets up to 5 chunks summarize at once — OpenAI calls are
+    // slow and independent per chunk, so running them in parallel meaningfully
+    // speeds up how fast a whole document finishes
 }, {connection, concurrency: 5})
