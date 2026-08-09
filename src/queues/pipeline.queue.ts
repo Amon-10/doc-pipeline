@@ -65,6 +65,10 @@ export interface SummarizeJobData {
   chunkIndex: number;
 }
 
+export interface MergeJobData {
+  jobId: string;
+}
+
 /**
  * Adds a job to the pipeline queue with automatic retry.
  *
