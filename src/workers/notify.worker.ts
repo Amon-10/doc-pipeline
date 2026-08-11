@@ -11,6 +11,7 @@ const notifyWorker = new Worker("notify", async (job: Job<JobPayload>) => {
     const jobId = data.jobId; // notify jobId
 
     try {
+        // check summary - missing summary means the merge worker's payload wasn't constructed correctly
         if (!summary) {
             throw new Error(`No summary provided for document ${documentId}`);
         };

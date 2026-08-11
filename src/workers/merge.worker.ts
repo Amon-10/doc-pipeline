@@ -10,6 +10,8 @@ const mergeWorker = new Worker("merge", async (job: Job<JobPayload>) => {
     const jobId = data.jobId; // merge jobId
     
     try {
+        // gather every chunk's summary in original order so the synthesized
+        // result reads coherently rather than jumbled
         const summariesResult = await db.query(
             `SELECT content
             FROM summaries
@@ -21,10 +23,14 @@ const mergeWorker = new Worker("merge", async (job: Job<JobPayload>) => {
             .map(row => row.content)
             .join(' ');
         
+        // reduce step of the pipeline — synthesizes N parallel chunk
+        // summaries (the map step, done in summarize worker) into one
         // Get final coherent merged summary
         const mergedSummary = await mergeSummaries(combinedText);
 
         // save final summary to summaries
+        // chunk_index NULL marks this as the final merged summary,
+        // distinct from the individual chunk rows already in this table
         await db.query(
             `INSERT INTO summaries (document_id, chunk_index, content, created_at)
             VALUES ($1, NULL, $2, now())`,
