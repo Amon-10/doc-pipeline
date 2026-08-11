@@ -5,6 +5,7 @@ import "./workers/extract.worker";
 import "./workers/chunk.worker";
 import "./workers/summarize.worker";
 import "./workers/merge.worker";
+import "./workers/notify.worker";
 
 const app = express();
 const PORT = process.env.PORT || 3000;

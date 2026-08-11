@@ -69,6 +69,11 @@ export interface MergeJobData {
   jobId: string;
 }
 
+export interface NotifyJobData {
+  jobId: string;
+  summary: string;
+}
+
 /**
  * Adds a job to the pipeline queue with automatic retry.
  *

@@ -60,16 +60,22 @@ router.post("/", upload.single('file'), async (req: Request, res: Response) => {
                 res.status(400).json({error: "No file uploaded"});
                 return;
             }
+
+            // Guard against no email in body
+            if (!req.body.email) {
+                res.status(400).json({error: "No email provided"});
+                return;
+            }
             
             /**
              * Create row for the uploaded document in db in the documents table
              * The document info returned is done so to provide client response
              */
             const insertToDb = await db.query(
-               `INSERT INTO documents (filename, original_name, status)
-                VALUES($1, $2, 'pending')
-                RETURNING id, filename, original_name, status, created_at, completed_at`,
-                [req.file.filename, req.file.originalname]
+               `INSERT INTO documents (filename, original_name, status, email)
+                VALUES($1, $2, 'pending', $3)
+                RETURNING id, filename, original_name, status, email, created_at, completed_at`,
+                [req.file.filename, req.file.originalname, req.body.email]
             );
 
             const document = insertToDb.rows[0];
