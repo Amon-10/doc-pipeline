@@ -55,7 +55,8 @@ jobs:
         run: npm test
         env:
           DATABASE_URL: postgresql://pipeline:pipeline@localhost:5432/pipeline
-          REDIS_URL: redis://localhost:6379
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
           OPENAI_API_KEY: dummy_key_for_tests
           EMAIL_FROM: test@test.com
           EMAIL_PASS: dummy_pass
