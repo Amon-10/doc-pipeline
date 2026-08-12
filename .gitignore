@@ -1,4 +1,7 @@
 # Local environment variables
 .env
+
 uploads/*
 !uploads/.gitkeep
+
+node_modules/
