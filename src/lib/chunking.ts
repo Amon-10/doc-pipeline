@@ -11,6 +11,8 @@
  * @returns array of text chunks, each ending on a complete sentence
  */
 export function chunkText(text: string, wordsPerChunk: number = 500): string[] {
+  if (!text.trim()) return [];
+  
   // split on sentence-ending punctuation followed by whitespace
   const sentences = text.split(/(?<=[.!?])\s+/);
   const chunks: string[] = [];
