@@ -24,7 +24,8 @@
     "nodemailer": "^8.0.9",
     "openai": "^6.39.0",
     "pdf-parse": "^1.1.1",
-    "pg": "^8.21.0"
+    "pg": "^8.21.0",
+    "resend": "^6.19.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
