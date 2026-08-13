@@ -1,5 +1,8 @@
 import { Resend } from "resend";
 
+// Uses Resend's HTTPS API rather than SMTP — most cloud platforms, including
+// Railway on non-Pro plans, block outbound SMTP entirely to prevent spam abuse.
+// HTTPS-based email APIs aren't subject to that restriction.
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 /** 
