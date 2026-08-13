@@ -2,7 +2,7 @@
 
 An asynchronous document processing pipeline that ingests PDFs, summarizes them using a distributed job queue, and emails the result — built to demonstrate backend infrastructure patterns: job queues, fan-out/fan-in parallelism, retry logic, and stateful pipeline orchestration.
 
-**Live demo:** https://doc-pipeline-production-a032.up.railway.app
+**Live Demo:** [Document Processing Pipeline](https://doc-pipeline-production-a032.up.railway.app)
 **Demo video:** *(link here once recorded)*
 
 ---
