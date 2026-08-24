@@ -5,7 +5,11 @@ import jwt from "jsonwebtoken";
 
 const jwt_secret = process.env.JWT_SECRET as string
 
-// REGISTER
+/**
+ * POST /register
+ * Creates a new user account. Password is hashed with bcrypt before
+ * storage — never stored or logged in plain text.
+ */
 export const register = async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
 
@@ -21,6 +25,9 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
         res.status(201).json(result.rows[0]);
     } catch (err: unknown) {
+        // Postgres error code 23505 = unique constraint violation —
+        // fired here specifically when the email already exists,
+        // since users.email has a UNIQUE constraint
         if (typeof err === "object" && err !== null && "code" in err && err.code === "23505") {
             return res.status(409).json({ error: 'email already exists' })
         }
@@ -28,7 +35,13 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     }
 }
 
-// LOGIN
+/**
+ * POST /login
+ * Verifies credentials and returns a signed JWT on success.
+ * The token carries only userId — no email or other user data —
+ * kept minimal since anything in the payload is readable by
+ * anyone holding the token, even though it can't be forged.
+ */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
 
@@ -50,6 +63,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
+        // Same generic "Invalid credentials" message whether the email
+        // doesn't exist or the password is wrong — avoids confirming
+        // to an attacker which emails are registered
         const token = jwt.sign(
             { userId: user.id },
             jwt_secret,
