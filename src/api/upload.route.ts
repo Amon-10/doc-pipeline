@@ -60,12 +60,6 @@ router.post("/", upload.single('file'), async (req: Request, res: Response) => {
                 res.status(400).json({error: "No file uploaded"});
                 return;
             }
-
-            // Guard against no email in body
-            /* if (!req.body.email) {
-                res.status(400).json({error: "No email provided"});
-                return;
-            } */
             
             /**
              * Create row for the uploaded document in db in the documents table
