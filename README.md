@@ -8,6 +8,10 @@ An asynchronous document processing pipeline that ingests PDFs, summarizes them 
 
 https://github.com/user-attachments/assets/3a7b92e1-4acb-41ba-a374-2ef3f82d80a6
 
+**Auth flow (added after the recording above):**
+
+https://github.com/user-attachments/assets/6bb3a1e4-52cb-4638-a8df-93965c27bdf7
+
 ---
 
 ## What it does
