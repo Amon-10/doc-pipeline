@@ -18,7 +18,7 @@ const notifyWorker = new Worker("notify", async (job: Job<JobPayload>) => {
 
         /** Get user email */
         const documentsResult = await db.query(
-            `SELECT email FROM documents WHERE id = $1`,
+            `SELECT users.email FROM documents JOIN users ON documents.user_id = users.id WHERE documents.id = $1`,
             [documentId]
         );
         const email = documentsResult.rows[0].email;
