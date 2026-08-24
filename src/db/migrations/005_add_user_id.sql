@@ -1,0 +1,2 @@
+ALTER TABLE documents ADD COLUMN user_id UUID REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE documents DROP COLUMN email;
