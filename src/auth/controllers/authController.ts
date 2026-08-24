@@ -5,17 +5,6 @@ import jwt from "jsonwebtoken";
 
 const jwt_secret = process.env.JWT_SECRET as string
 
-/* export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const getUsers = await db.query(
-            `SELECT id, username, created_at FROM users`
-        )
-        return res.json(getUsers.rows)
-    } catch (err) {
-        next(err)
-    }
-} */
-
 // REGISTER
 export const register = async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
