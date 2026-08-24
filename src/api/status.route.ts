@@ -13,10 +13,10 @@ router.get("/:documentId", async (req: Request, res: Response) => {
         const { documentId } = req.params;
 
         const documentResult = await db.query(
-            `SELECT id, status, email, filename, created_at, completed_at
+            `SELECT id, status, user_id, filename, created_at, completed_at
             FROM documents
-            WHERE id = $1`,
-            [documentId]
+            WHERE id = $1 AND user_id = $2`,
+            [documentId, req.userId]
         );
 
         // 404 — the resource itself doesn't exist, distinct from a bad
