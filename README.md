@@ -1,6 +1,6 @@
 # doc-pipeline
 
-An asynchronous document processing pipeline that ingests PDFs, summarizes them using a distributed job queue, and emails the result — built to demonstrate backend infrastructure patterns: job queues, fan-out/fan-in parallelism, retry logic, and stateful pipeline orchestration.
+An asynchronous document processing pipeline that ingests PDFs, summarizes them using a distributed job queue, and emails the result — built to demonstrate backend infrastructure patterns: job queues, fan-out/fan-in parallelism, retry logic, stateful pipeline orchestration, and authenticated, per-user access control.
 
 **Live Demo:** [Document Processing Pipeline](https://doc-pipeline-production-a032.up.railway.app)
 
@@ -12,7 +12,7 @@ https://github.com/user-attachments/assets/3a7b92e1-4acb-41ba-a374-2ef3f82d80a6
 
 ## What it does
 
-A user uploads a PDF along with their email. The system:
+A user registers for an account, logs in to receive a JWT, then uploads a PDF using that token. The system:
 
 1. Extracts raw text from the PDF
 2. Splits the text into chunks
@@ -20,7 +20,7 @@ A user uploads a PDF along with their email. The system:
 4. Merges all chunk summaries into one coherent final summary
 5. Emails the final summary to the user
 
-All of this happens asynchronously — the upload request returns immediately, and a `GET /status/:documentId` endpoint lets the client poll progress at any time.
+All of this happens asynchronously — the upload request returns immediately, and a `GET /status/:documentId` endpoint lets the client poll progress at any time. Every document is tied to the account that uploaded it; only that account can view its status.
 
 This exists because a synchronous request/response cycle can't reasonably handle a multi-minute, multi-step, externally-dependent workflow like this. A job queue lets each stage run independently, retry on failure, and scale separately from the others.
 
@@ -41,6 +41,14 @@ flowchart TD
 ```
 
 Each stage is a **separate BullMQ queue** with its own dedicated worker. Postgres tracks the state of every document and every individual job; Redis holds the queues themselves.
+
+### Authentication and ownership
+
+`/upload` and `/status/:documentId` both require a valid JWT, obtained via `/register` and `/login`. Passwords are hashed with bcrypt before storage — never stored or logged in plain text — and login returns the same generic "Invalid credentials" error whether the email doesn't exist or the password is wrong, avoiding confirming to an attacker which emails are registered.
+
+Every document is tied to its owner via `documents.user_id`, a foreign key into `users.id`. The status route enforces ownership directly in its query (`WHERE id = $1 AND user_id = $2`), so a user requesting another account's document simply gets a 404 — the same response as if the document didn't exist at all, rather than a 403 that would confirm it exists but belongs to someone else.
+
+Identity is only ever taken from the verified JWT (`req.userId`, set by the `requireAuth` middleware), never from request body fields a client could freely type in — this was a deliberate change from an earlier version of the project where the upload route accepted a free-text `email` field with no verification behind it at all.
 
 ### Why separate queues per job type
 
@@ -64,7 +72,8 @@ Every job gets up to 3 attempts with exponential backoff (2s → 4s → 8s), con
 
 - **TypeScript / Node.js / Express** — API layer
 - **BullMQ + Redis** — job queue and worker orchestration
-- **PostgreSQL** — persistent state for documents, jobs, and summaries
+- **PostgreSQL** — persistent state for users, documents, jobs, and summaries
+- **bcrypt + jsonwebtoken** — password hashing and JWT-based authentication
 - **Docker Compose** — local development environment
 - **OpenAI API** — chunk summarization and final synthesis
 - **Resend** — transactional email delivery
@@ -74,9 +83,10 @@ Every job gets up to 3 attempts with exponential backoff (2s → 4s → 8s), con
 
 ## Database schema
 
-Three tables, deliberately kept simple:
+Four tables, deliberately kept simple:
 
-- **`documents`** — one row per upload: filename, email, overall status, total chunk count
+- **`users`** — one row per account: email (unique), bcrypt password hash
+- **`documents`** — one row per upload: filename, owning `user_id`, overall status, total chunk count
 - **`jobs`** — one row per unit of work across every stage (extract, chunk, summarize×N, merge, notify), with its own status, attempt count, and error message
 - **`summaries`** — one row per chunk summary (`chunk_index` = 0, 1, 2...), plus one final row per document where `chunk_index IS NULL` marking the merged result
 
@@ -84,18 +94,22 @@ Splitting `documents.status` from individual `jobs.status` was a deliberate choi
 
 ## API
 
-**`POST /upload`** — multipart form with a `file` (PDF) and `email` field. Returns the created document record immediately; processing continues in the background.
+**`POST /register`** — create an account with `email` and `password`. Password is hashed before storage.
 
-**`GET /status/:documentId`** — returns the document's current status plus every job associated with it, so a client can see exactly which stage it's at.
+**`POST /login`** — returns a JWT on valid credentials.
 
-**`GET /health`** — basic liveness check.
+**`POST /upload`** — requires `Authorization: Bearer <token>`. Multipart form with a `file` (PDF). Returns the created document record immediately, owned by the authenticated user; processing continues in the background.
+
+**`GET /status/:documentId`** — requires `Authorization: Bearer <token>`. Returns the document's current status plus every job associated with it, scoped to documents owned by the authenticated user.
+
+**`GET /health`** — basic liveness check, unauthenticated.
 
 ## Running locally
 
 ```bash
 git clone https://github.com/Amon-10/doc-pipeline.git
 cd doc-pipeline
-cp .env.example .env   # fill in OPENAI_API_KEY and RESEND_API_KEY
+cp .env.example .env   # fill in OPENAI_API_KEY, RESEND_API_KEY, and JWT_SECRET
 docker compose up -d --build
 ```
 
@@ -111,9 +125,9 @@ Current coverage is a unit test suite for the text-chunking logic (sentence-boun
 
 ## Deployment notes
 
-Deployed on Railway: app service + managed Postgres + managed Redis. Two things came up during deployment worth noting:
+Deployed on Railway: app service + managed Postgres + managed Redis. A few things came up during deployment worth noting:
 
-- **Migrations don't run automatically on a managed Postgres instance** the way they do locally via Docker's `docker-entrypoint-initdb.d` mount. They were applied manually, once, via `railway connect` (which tunnels directly into the database) and psql's `\i` command to run each numbered migration file in order.
+- **Migrations don't run automatically on a managed Postgres instance** the way they do locally via Docker's `docker-entrypoint-initdb.d` mount. They were applied manually, once per migration, via `railway connect` (which tunnels directly into the database) and psql's `\i` command to run each numbered migration file in order.
 - **Railway blocks outbound SMTP entirely on non-Pro plans** to prevent spam abuse — this affected email delivery specifically, not the rest of the pipeline. The fix was switching from SMTP (nodemailer) to Resend's HTTPS-based email API, which isn't subject to that restriction. As a side effect of using Resend's shared testing domain (rather than a verified custom domain), delivery is currently limited to the account's own verified address — the pipeline itself works end to end regardless, as shown in the demo video.
 
 ## What I'd add next
@@ -122,3 +136,5 @@ Deployed on Railway: app service + managed Postgres + managed Redis. Two things 
 - A verified sending domain to lift the email delivery restriction
 - A transaction lock or atomic counter to fully close the fan-in race condition
 - Deleting uploaded PDFs from disk after extraction, or moving storage to S3/R2 rather than local disk
+- Rate limiting on `/upload` and per-worker OpenAI call limits, to protect against abuse and control API cost on a publicly reachable endpoint
+- A global Express error-handling middleware — malformed requests currently surface Node's default HTML stack trace instead of a clean JSON error response
