@@ -101,4 +101,4 @@ const summarizeWorker = new Worker("summarize", async(job: Job<JobPayload>) => {
     // concurrency: 5 lets up to 5 chunks summarize at once — OpenAI calls are
     // slow and independent per chunk, so running them in parallel meaningfully
     // speeds up how fast a whole document finishes
-}, {connection, concurrency: 5})
+}, {connection, concurrency: 5, limiter: { max: 5, duration: 1000 }})
