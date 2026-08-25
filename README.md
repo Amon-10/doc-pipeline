@@ -54,6 +54,12 @@ Every document is tied to its owner via `documents.user_id`, a foreign key into 
 
 Identity is only ever taken from the verified JWT (`req.userId`, set by the `requireAuth` middleware), never from request body fields a client could freely type in — this was a deliberate change from an earlier version of the project where the upload route accepted a free-text `email` field with no verification behind it at all.
 
+### Rate limiting
+
+`/upload` is limited per authenticated user (5 requests per 15 minutes), keyed on `userId` rather than IP where identity is available — multiple legitimate users can share an IP (offices, NAT), but each user's own OpenAI-cost-generating activity should be capped individually. `/register` and `/login` are limited per IP (10 attempts per 15 minutes), since no verified identity exists yet at that point in the flow.
+
+Separately, the `summarize` worker caps itself to 5 OpenAI calls per second via BullMQ's built-in job limiter, independent of its `concurrency: 5` setting — concurrency controls how many jobs run *simultaneously*, while the limiter controls how many *start* within a time window, which more directly matches how OpenAI's own account-level rate limits are actually enforced.
+
 ### Why separate queues per job type
 
 Early in development, all five workers listened on a single shared queue and filtered jobs by name inside each worker (`if (job.name !== 'extract') return`). This created a real, hard-to-spot bug: BullMQ workers sharing one queue name become **competing consumers** — any job can be picked up by any worker instance, regardless of whether that worker is built to handle it. A job named `"extract"` could just as easily be grabbed by the `summarize` worker, whose guard clause would silently `return` without doing any work, and BullMQ would still mark the job `completed`.
@@ -78,6 +84,7 @@ Every job gets up to 3 attempts with exponential backoff (2s → 4s → 8s), con
 - **BullMQ + Redis** — job queue and worker orchestration
 - **PostgreSQL** — persistent state for users, documents, jobs, and summaries
 - **bcrypt + jsonwebtoken** — password hashing and JWT-based authentication
+- **express-rate-limit** — abuse and cost protection on upload and auth routes
 - **Docker Compose** — local development environment
 - **OpenAI API** — chunk summarization and final synthesis
 - **Resend** — transactional email delivery
@@ -98,11 +105,11 @@ Splitting `documents.status` from individual `jobs.status` was a deliberate choi
 
 ## API
 
-**`POST /register`** — create an account with `email` and `password`. Password is hashed before storage.
+**`POST /register`** — create an account with `email` and `password`. Password is hashed before storage. Rate limited per IP.
 
-**`POST /login`** — returns a JWT on valid credentials.
+**`POST /login`** — returns a JWT on valid credentials. Rate limited per IP.
 
-**`POST /upload`** — requires `Authorization: Bearer <token>`. Multipart form with a `file` (PDF). Returns the created document record immediately, owned by the authenticated user; processing continues in the background.
+**`POST /upload`** — requires `Authorization: Bearer <token>`. Multipart form with a `file` (PDF). Returns the created document record immediately, owned by the authenticated user; processing continues in the background. Rate limited per user.
 
 **`GET /status/:documentId`** — requires `Authorization: Bearer <token>`. Returns the document's current status plus every job associated with it, scoped to documents owned by the authenticated user.
 
@@ -140,5 +147,4 @@ Deployed on Railway: app service + managed Postgres + managed Redis. A few thing
 - A verified sending domain to lift the email delivery restriction
 - A transaction lock or atomic counter to fully close the fan-in race condition
 - Deleting uploaded PDFs from disk after extraction, or moving storage to S3/R2 rather than local disk
-- Rate limiting on `/upload` and per-worker OpenAI call limits, to protect against abuse and control API cost on a publicly reachable endpoint
 - A global Express error-handling middleware — malformed requests currently surface Node's default HTML stack trace instead of a clean JSON error response
