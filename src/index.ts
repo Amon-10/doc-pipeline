@@ -16,6 +16,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.json({ message: "Doc pipeline API", status: "ok" });
+});
+
 app.use("/", authRoutes);
 app.use("/upload", requireAuth, uploadLimiter, uploadRouter);
 app.use("/status", requireAuth, statusRouter);
