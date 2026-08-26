@@ -4,7 +4,7 @@ An asynchronous document processing pipeline that ingests PDFs, summarizes them 
 
 **Live Demo:** [Document Processing Pipeline](https://doc-pipeline-production-a032.up.railway.app)
 
-**Demo video:** 
+**Demo video:**
 
 https://github.com/user-attachments/assets/3a7b92e1-4acb-41ba-a374-2ef3f82d80a6
 
@@ -72,7 +72,7 @@ The `chunk` worker splits a document into N pieces and enqueues N independent `s
 
 The tricky part is the **fan-in**: only one `merge` job should ever run per document, triggered exactly once, after the *last* chunk finishes — not the *chunk with the highest index*, since chunks finish in unpredictable order due to network timing. Each `summarize` job, after saving its own result, counts how many summaries exist for that document and compares it against the document's known total chunk count. Whichever job's insert makes the count match is the one that enqueues `merge`.
 
-**Known limitation:** this count-then-compare check has a theoretical race condition — two summarize jobs finishing at nearly the same instant could both observe the same count and both trigger `merge`. At this project's scale that risk is low and hasn't been observed, but a fully correct production implementation would use a database transaction lock or an atomic counter instead.
+The fan-in coordination uses a Postgres advisory lock inside a transaction to guarantee exactly one merge job per document. Each summarize job wraps its summary insert and count check in a transaction with `pg_try_advisory_xact_lock(document_id)` — only one worker can acquire the lock at a time. The other gets `false` back and skips enqueuing merge entirely. The lock releases automatically on commit.
 
 ### Retry strategy
 
@@ -132,7 +132,7 @@ Requires Docker. The app runs on `http://localhost:3000`.
 npm test
 ```
 
-Current coverage is a unit test suite for the text-chunking logic (sentence-boundary-aware splitting, edge cases like empty input). Integration tests covering the workers' database behavior against a dedicated test database are a known gap — deferred to prioritize finishing and deploying the full pipeline first, and planned as a follow-up.
+Current coverage is a unit test suite for the text-chunking logic (sentence-boundary-aware splitting, edge cases like empty input). Integration tests covering the workers' database behavior against a dedicated test database are a planned follow-up.
 
 ## Deployment notes
 
@@ -145,6 +145,4 @@ Deployed on Railway: app service + managed Postgres + managed Redis. A few thing
 
 - Integration tests against a dedicated test database
 - A verified sending domain to lift the email delivery restriction
-- A transaction lock or atomic counter to fully close the fan-in race condition
 - Deleting uploaded PDFs from disk after extraction, or moving storage to S3/R2 rather than local disk
-- A global Express error-handling middleware — malformed requests currently surface Node's default HTML stack trace instead of a clean JSON error response
