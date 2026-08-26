@@ -45,7 +45,7 @@ const summarizeWorker = new Worker("summarize", async(job: Job<JobPayload>) => {
             // Try to acquire advisory lock on this document
             // Only one worker can hold this lock at a time
             const lockResult = await client.query(
-                `SELECT pg_try_advisory_xact_lock($1)`,
+                `SELECT pg_try_advisory_xact_lock(('x' || substr(md5($1), 1, 16))::bit(64)::bigint)`,
                 [documentId]
             );
             const acquiredLock = lockResult.rows[0].pg_try_advisory_xact_lock;
