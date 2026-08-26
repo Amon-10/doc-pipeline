@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import { Request, Response } from "express";
 import uploadRouter from "./api/upload.route";
 import "./workers/extract.worker";
 import "./workers/chunk.worker";
@@ -21,6 +22,10 @@ app.use("/status", requireAuth, statusRouter);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+app.use((req: Request, res: Response) => {
+  res.status(404).json({ error: `Cannot ${req.method} ${req.path}` });
 });
 
 app.listen(PORT, () => {
