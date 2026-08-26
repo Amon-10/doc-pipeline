@@ -30,5 +30,4 @@ pool.on("error", (err) => {
  */
 export const db = {
   query: (text: string, params?: unknown[]) => pool.query(text, params),
-  connect: () => pool.connect(),
 };
