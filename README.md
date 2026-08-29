@@ -140,6 +140,7 @@ Deployed on Railway: app service + managed Postgres + managed Redis. A few thing
 
 - **Migrations don't run automatically on a managed Postgres instance** the way they do locally via Docker's `docker-entrypoint-initdb.d` mount. They were applied manually, once per migration, via `railway connect` (which tunnels directly into the database) and psql's `\i` command to run each numbered migration file in order.
 - **Railway blocks outbound SMTP entirely on non-Pro plans** to prevent spam abuse — this affected email delivery specifically, not the rest of the pipeline. The fix was switching from SMTP (nodemailer) to Resend's HTTPS-based email API, which isn't subject to that restriction. As a side effect of using Resend's shared testing domain (rather than a verified custom domain), delivery is currently limited to the account's own verified address — the pipeline itself works end to end regardless, as shown in the demo video.
+- **Update** I am now using my own verified custom domain. This lifts the restriction that was previously placed and users can now have summaries sent directly into the email they registered with.(08/29/2026)
 
 ## What I'd add next
 
