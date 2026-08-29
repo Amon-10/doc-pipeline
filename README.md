@@ -145,6 +145,5 @@ Deployed on Railway: app service + managed Postgres + managed Redis. A few thing
 ## What I'd add next
 
 - Integration tests against a dedicated test database
-- A verified sending domain to lift the email delivery restriction
 - A transaction lock or atomic counter to fully close the fan-in race condition
 - Deleting uploaded PDFs from disk after extraction, or moving storage to S3/R2 rather than local disk
