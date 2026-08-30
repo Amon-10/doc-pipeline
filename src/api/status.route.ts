@@ -36,9 +36,19 @@ router.get("/:documentId", async (req: Request, res: Response) => {
             [documentId]
         );
 
+        const summaryResult = await db.query(
+            `SELECT content
+            FROM summaries
+            WHERE document_id = $1 AND chunk_index IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1`,
+            [documentId]
+        );
+
         res.status(200).json({
             document,
             jobs: jobsResult.rows,
+            summary: summaryResult.rows[0]?.content ?? null,
         });
 
     } catch (error) {
