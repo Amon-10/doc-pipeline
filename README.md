@@ -28,6 +28,20 @@ All of this happens asynchronously — the upload request returns immediately, a
 
 This exists because a synchronous request/response cycle can't reasonably handle a multi-minute, multi-step, externally-dependent workflow like this. A job queue lets each stage run independently, retry on failure, and scale separately from the others.
 
+## Tech stack
+
+- **TypeScript / Node.js / Express** — API layer
+- **BullMQ + Redis** — job queue and worker orchestration
+- **PostgreSQL** — persistent state for users, documents, jobs, and summaries
+- **bcrypt + jsonwebtoken** — password hashing and JWT-based authentication
+- **express-rate-limit** — abuse and cost protection on upload and auth routes
+- **Docker Compose** — local development environment
+- **OpenAI API** — chunk summarization and final synthesis
+- **Resend** — transactional email delivery
+- **Vitest** — testing
+- **GitHub Actions** — CI, running tests against real Postgres/Redis service containers
+- **Railway** — deployment
+
 ## Architecture
 
 ```mermaid
@@ -77,20 +91,6 @@ The tricky part is the **fan-in**: only one `merge` job should ever run per docu
 ### Retry strategy
 
 Every job gets up to 3 attempts with exponential backoff (2s → 4s → 8s), configured once in a single `addJob` function that every part of the app funnels through. This matters most for the `summarize` stage, which depends on an external API — retrying immediately after a rate limit would just get rate limited again; backing off gives OpenAI room to recover.
-
-## Tech stack
-
-- **TypeScript / Node.js / Express** — API layer
-- **BullMQ + Redis** — job queue and worker orchestration
-- **PostgreSQL** — persistent state for users, documents, jobs, and summaries
-- **bcrypt + jsonwebtoken** — password hashing and JWT-based authentication
-- **express-rate-limit** — abuse and cost protection on upload and auth routes
-- **Docker Compose** — local development environment
-- **OpenAI API** — chunk summarization and final synthesis
-- **Resend** — transactional email delivery
-- **Vitest** — testing
-- **GitHub Actions** — CI, running tests against real Postgres/Redis service containers
-- **Railway** — deployment
 
 ## Database schema
 
