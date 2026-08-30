@@ -4,9 +4,14 @@ import path from "path";
 import { db } from "../db/client";
 import { addJob, connection } from "../queues/pipeline.queue";
 import type { ExtractJobData, JobPayload } from "../queues/pipeline.queue";
-const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require("pdf-parse");
+type PdfParser = (buffer: Buffer) => Promise<{ text: string }>;
 
-const extractWorker = new Worker("extract", async (job: Job<JobPayload>) => {
+// pdf-parse exposes a CommonJS function. Keep require() here because using a
+// default ESM import has caused runtime interop failures with this package.
+const pdfParse: PdfParser = require("pdf-parse");
+
+/** Allows tests to substitute PDF parsing without changing production loading. */
+export const createExtractJobProcessor = (parsePdf: PdfParser = pdfParse) => async (job: Job<JobPayload>) => {
 
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as ExtractJobData; // typecheck as unknown and then with my custom defined type - ExtractJobData
@@ -31,7 +36,7 @@ const extractWorker = new Worker("extract", async (job: Job<JobPayload>) => {
         // Read file from disk
         const filePath = path.join("uploads", filename); // create path to pdf on disk
         const fileBuffer = await fs.readFile(filePath); // extract binary pdf contents
-        const pdfData = await pdfParse(fileBuffer); // extract raw text from binary pdf contents
+        const pdfData = await parsePdf(fileBuffer); // extract raw text from binary pdf contents
 
         /**
          * Insert and create to chunk row in jobs table
@@ -90,10 +95,14 @@ const extractWorker = new Worker("extract", async (job: Job<JobPayload>) => {
         // Rethrow so BullMQ triggers retry
         throw err;
     }
-},
+};
+
+export const processExtractJob = createExtractJobProcessor();
+
+if (process.env.NODE_ENV !== "test") new Worker("extract", processExtractJob,
 /**
  * Passing {connection: connection} as {connection}
  * typescript shortform
  * basically results in connection: {host: "redis", port: 6379}
  */
-{connection} )
+{connection} );

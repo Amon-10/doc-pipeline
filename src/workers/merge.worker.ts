@@ -4,7 +4,7 @@ import { Worker, Job } from "bullmq";
 import { connection, addJob } from "../queues/pipeline.queue";
 import { mergeSummaries } from "../lib/openai";
 
-const mergeWorker = new Worker("merge", async (job: Job<JobPayload>) => {
+export const processMergeJob = async (job: Job<JobPayload>) => {
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as MergeJobData;
     const jobId = data.jobId; // merge jobId
@@ -88,4 +88,6 @@ const mergeWorker = new Worker("merge", async (job: Job<JobPayload>) => {
 
         throw err; // rethrow so BullMQ triggers retry
     }
-}, {connection})
+};
+
+if (process.env.NODE_ENV !== "test") new Worker("merge", processMergeJob, {connection});

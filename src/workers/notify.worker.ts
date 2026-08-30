@@ -4,7 +4,7 @@ import { Worker, Job } from "bullmq";
 import { connection } from "../queues/pipeline.queue";
 import { sendSummaryEmail } from "../lib/mailer";
 
-const notifyWorker = new Worker("notify", async (job: Job<JobPayload>) => {
+export const processNotifyJob = async (job: Job<JobPayload>) => {
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as NotifyJobData;
     const summary = data.summary;
@@ -50,4 +50,6 @@ const notifyWorker = new Worker("notify", async (job: Job<JobPayload>) => {
 
         throw err; // rethrow so BullMQ triggers retry
     }
-}, {connection})
+};
+
+if (process.env.NODE_ENV !== "test") new Worker("notify", processNotifyJob, {connection});

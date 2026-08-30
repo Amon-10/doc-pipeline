@@ -31,6 +31,13 @@ const queues: Record<JobType, Queue> = {
   notify: new Queue("notify", { connection }),
 };
 
+/** Exposed for operational checks and integration-test queue assertions. */
+export const getQueue = (jobType: JobType): Queue => queues[jobType];
+
+export const closeQueues = async (): Promise<void> => {
+  await Promise.all(Object.values(queues).map((queue) => queue.close()));
+};
+
 /**
  * Shape of every job added to the pipeline queue.
  *

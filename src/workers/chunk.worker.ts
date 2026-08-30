@@ -4,7 +4,7 @@ import type { ChunkJobData, JobPayload } from "../queues/pipeline.queue";
 import { db } from "../db/client";
 import { chunkText } from "../lib/chunking";
 
-const chunkWorker = new Worker("chunk", async (job: Job<JobPayload>) => {
+export const processChunkJob = async (job: Job<JobPayload>) => {
 
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as ChunkJobData;
@@ -80,4 +80,6 @@ const chunkWorker = new Worker("chunk", async (job: Job<JobPayload>) => {
         throw err; // rethrow so BullMQ triggers retry
     }
 
-}, {connection})
+};
+
+if (process.env.NODE_ENV !== "test") new Worker("chunk", processChunkJob, {connection});

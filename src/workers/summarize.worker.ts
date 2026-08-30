@@ -4,7 +4,7 @@ import type { SummarizeJobData, JobPayload } from "../queues/pipeline.queue";
 import { Worker, Job } from "bullmq";
 import { connection, addJob } from "../queues/pipeline.queue";
 
-const summarizeWorker = new Worker("summarize", async(job: Job<JobPayload>) => {
+export const processSummarizeJob = async(job: Job<JobPayload>) => {
 
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as SummarizeJobData;
@@ -101,4 +101,7 @@ const summarizeWorker = new Worker("summarize", async(job: Job<JobPayload>) => {
     // concurrency: 5 lets up to 5 chunks summarize at once — OpenAI calls are
     // slow and independent per chunk, so running them in parallel meaningfully
     // speeds up how fast a whole document finishes
-}, {connection, concurrency: 5, limiter: { max: 5, duration: 1000 }})
+};
+
+if (process.env.NODE_ENV !== "test") new Worker("summarize", processSummarizeJob,
+  {connection, concurrency: 5, limiter: { max: 5, duration: 1000 }});
