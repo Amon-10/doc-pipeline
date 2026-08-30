@@ -129,10 +129,14 @@ Requires Docker. The app runs on `http://localhost:3000`.
 ## Testing
 
 ```bash
+# Start isolated, disposable integration services (ports 5433 and 6380)
+docker compose -f docker-compose.test.yml up -d
+
+# Runs unit and integration tests
 npm test
 ```
 
-Current coverage is a unit test suite for the text-chunking logic (sentence-boundary-aware splitting, edge cases like empty input). Integration tests covering the workers' database behavior against a dedicated test database are a known gap — deferred to prioritize finishing and deploying the full pipeline first, and planned as a follow-up.
+Integration tests recreate only the `pipeline_test` database schema and flush the dedicated test Redis instance. Override their locations with `TEST_DATABASE_URL`, `TEST_REDIS_HOST`, and `TEST_REDIS_PORT`; as a safety check, the database name must contain `test`. OpenAI and Resend are mocked by the suite, so tests never make provider calls or send email.
 
 ## Deployment notes
 
