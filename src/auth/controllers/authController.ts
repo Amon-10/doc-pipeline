@@ -1,5 +1,5 @@
 import { db } from '../../db/client';
-import bcrypt from "bcrypt-ts";
+import { compare, hash } from "bcrypt-ts";
 import { Request, Response, NextFunction } from 'express';
 import jwt from "jsonwebtoken";
 
@@ -14,7 +14,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     const { email, password } = req.body;
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await hash(password, 10);
 
         const result = await db.query(
             `INSERT INTO users (email, password_hash)
@@ -57,7 +57,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         const user = result.rows[0];
 
-        const isMatch = await bcrypt.compare(password, user.password_hash);
+        const isMatch = await compare(password, user.password_hash);
 
         if (!isMatch) {
             return res.status(400).json({ error: 'Invalid credentials' });

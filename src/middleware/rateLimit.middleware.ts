@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { Request } from "express";
 
 /**
@@ -12,7 +12,7 @@ export const uploadLimiter = rateLimit({
   max: 5, // 5 uploads per window
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: Request) => req.userId || req.ip || "unknown",
+  keyGenerator: (req: Request) => req.userId || ipKeyGenerator(req.ip || "unknown"),
   message: { error: "Too many uploads. Please wait before uploading again." },
 });
 
