@@ -2,7 +2,7 @@
 
 An asynchronous document processing pipeline that ingests PDFs, summarizes them using a distributed job queue, and emails the result — built to demonstrate backend infrastructure patterns: job queues, fan-out/fan-in parallelism, retry logic, stateful pipeline orchestration, and authenticated, per-user access control.
 
-**Live Demo:** [Document Processing Pipeline](api.docpipeline.devamon.com)
+**Live Demo:** [Document Processing Pipeline](https://api.docpipeline.devamon.com)
 
 **Demo video:** 
 
