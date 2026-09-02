@@ -2,17 +2,31 @@
 
 An asynchronous document processing pipeline that ingests PDFs, summarizes them using a distributed job queue, and emails the result — built to demonstrate backend infrastructure patterns: job queues, fan-out/fan-in parallelism, retry logic, stateful pipeline orchestration, and authenticated, per-user access control.
 
-**Live Demo:** [Document Processing Pipeline](https://api.docpipeline.devamon.com)
+## Try it
 
-**Demo video:** 
+- **[Open the live app](https://docpipeline.devamon.com)** — the easiest way to try the project. Create an account, upload a PDF, follow its progress, and read the resulting summary.
+- **[Open the API](https://api.docpipeline.devamon.com)** — the backend service itself. This returns JSON and is primarily useful to engineers or API clients.
+- **[Check API health](https://api.docpipeline.devamon.com/health)** — a simple endpoint confirming that the backend is online.
+
+The live app is the best starting point for anyone who wants to experience the project without using an API client. The API link is provided separately for engineers who want to inspect the backend service directly.
+
+### Demo recordings
+
+**Original pipeline demo:**
 
 https://github.com/user-attachments/assets/3a7b92e1-4acb-41ba-a374-2ef3f82d80a6
 
-**Auth flow (added after the recording above):**
+**Authentication demo (added after the original recording):**
 
 https://github.com/user-attachments/assets/6bb3a1e4-52cb-4638-a8df-93965c27bdf7
 
 ---
+
+## Project focus
+
+This is primarily a backend engineering project. Its purpose is to demonstrate asynchronous processing, distributed job queues, fan-out/fan-in orchestration, retries, persistence, authentication, ownership enforcement, rate limiting, and external-service integration.
+
+The frontend is deliberately lightweight—plain HTML, CSS, and JavaScript served by a small Node.js proxy. It was added to make the backend system easy to evaluate without requiring reviewers to construct API requests manually. The interface exposes the underlying job stages and status updates, while the queue-driven pipeline remains the core of the project.
 
 ## What it does
 
@@ -38,9 +52,10 @@ This exists because a synchronous request/response cycle can't reasonably handle
 - **Docker Compose** — local development environment
 - **OpenAI API** — chunk summarization and final synthesis
 - **Resend** — transactional email delivery
+- **HTML / CSS / JavaScript** — lightweight demonstration interface
 - **Vitest** — testing
 - **GitHub Actions** — CI, running tests against real Postgres/Redis service containers
-- **Railway** — deployment
+- **Railway + Cloudflare** — deployment, custom domains, and public routing
 
 ## Architecture
 
@@ -126,6 +141,33 @@ docker compose up -d --build
 
 Requires Docker. The app runs on `http://localhost:3000`.
 
+### Frontend
+
+The frontend is a small, framework-free client built to make the backend workflow accessible. It handles registration and login, authenticated PDF uploads, live pipeline status polling, and final-summary display. A separate Node.js server serves the static files and proxies `/api/*` requests to the backend, so the browser never needs direct cross-origin API access.
+
+```bash
+# Terminal 1: start the API, workers, Postgres, and Redis
+docker compose up -d --build
+
+# Terminal 2: start the frontend
+npm run frontend
+```
+
+Open [http://localhost:5173](http://localhost:5173). By default, the frontend proxies requests to the local API at `http://localhost:3000`.
+
+To run the local frontend against the deployed API instead:
+
+```bash
+API_ORIGIN=https://api.docpipeline.devamon.com npm run frontend
+```
+
+The production frontend and API are deployed as separate Railway services:
+
+- `https://docpipeline.devamon.com` — public, user-facing application
+- `https://api.docpipeline.devamon.com` — backend API
+
+Only the frontend service receives `API_ORIGIN`; database, Redis, JWT, OpenAI, and Resend credentials remain isolated within the backend service.
+
 ## Testing
 
 ```bash
@@ -140,8 +182,10 @@ Integration tests recreate only the `pipeline_test` database schema and flush th
 
 ## Deployment notes
 
-Deployed on Railway: app service + managed Postgres + managed Redis. A few things came up during deployment worth noting:
+Deployed on Railway as separate frontend and backend services, alongside managed Postgres and Redis. Cloudflare provides DNS and the custom public domains. A few things came up during deployment worth noting:
 
+- **The frontend has its own Dockerfile.** Both services share this repository, so the frontend Railway service uses `frontend/Dockerfile` while the backend continues to use the root `Dockerfile`. This prevents the frontend container from accidentally starting the backend workers.
+- **The API is proxied by the frontend server.** Browser requests go to `/api/*` on the frontend domain and are forwarded server-to-server to `API_ORIGIN`. This keeps the services independently deployable without adding browser-facing CORS configuration to the API.
 - **Migrations don't run automatically on a managed Postgres instance** the way they do locally via Docker's `docker-entrypoint-initdb.d` mount. They were applied manually, once per migration, via `railway connect` (which tunnels directly into the database) and psql's `\i` command to run each numbered migration file in order.
 - **Railway blocks outbound SMTP entirely on non-Pro plans** to prevent spam abuse — this affected email delivery specifically, not the rest of the pipeline. The fix was switching from SMTP (nodemailer) to Resend's HTTPS-based email API, which isn't subject to that restriction. As a side effect of using Resend's shared testing domain (rather than a verified custom domain), delivery is currently limited to the account's own verified address — the pipeline itself works end to end regardless, as shown in the demo video.
 - **Update** I am now using my own verified custom domain. This lifts the restriction that was previously placed and users can now have summaries sent directly into the email they registered with.(08/29/2026)
