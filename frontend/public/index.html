@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Turn long PDF documents into clear, useful summaries." />
+    <title>Docflow — PDF summaries, without the wait</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Docflow home"><span class="brand-mark">D</span>docflow</a>
+      <div class="header-actions">
+        <span class="user-email" id="userEmail"></span>
+        <button class="text-button hidden" id="logoutButton" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="auth-shell" id="authView">
+        <div class="hero-copy">
+          <p class="eyebrow">READ LESS. KNOW MORE.</p>
+          <h1>Your PDFs,<br /><span>distilled.</span></h1>
+          <p class="hero-description">Upload any PDF and get a focused summary delivered to your inbox—while our pipeline handles the heavy reading.</p>
+          <div class="promise-list">
+            <div><span>01</span><p><strong>Private by design</strong>Your documents stay linked to your account.</p></div>
+            <div><span>02</span><p><strong>Progress you can see</strong>Follow every processing stage in real time.</p></div>
+            <div><span>03</span><p><strong>Ready when you are</strong>Read here or find the summary in your inbox.</p></div>
+          </div>
+        </div>
+
+        <div class="auth-card">
+          <div class="auth-tabs" role="tablist" aria-label="Account access">
+            <button class="auth-tab active" id="loginTab" role="tab" aria-selected="true">Log in</button>
+            <button class="auth-tab" id="registerTab" role="tab" aria-selected="false">Create account</button>
+          </div>
+          <div class="auth-heading">
+            <p class="mini-label" id="authKicker">WELCOME BACK</p>
+            <h2 id="authTitle">Continue your reading.</h2>
+            <p id="authSubtitle">Sign in to upload a document or check its progress.</p>
+          </div>
+          <form id="authForm" novalidate>
+            <label for="email">Email address</label>
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="At least 8 characters" minlength="8" required />
+            <p class="form-error" id="authError" role="alert"></p>
+            <button class="primary-button" id="authSubmit" type="submit"><span>Log in</span><span aria-hidden="true">→</span></button>
+          </form>
+          <p class="auth-switch" id="authSwitch">New to Docflow? <button type="button">Create an account</button></p>
+        </div>
+      </section>
+
+      <section class="app-shell hidden" id="appView">
+        <div class="dashboard-intro">
+          <p class="eyebrow">DOCUMENT WORKSPACE</p>
+          <h1>Turn pages into <span>perspective.</span></h1>
+          <p>Upload a PDF, then stay here while we extract, summarize, and deliver the essentials.</p>
+        </div>
+
+        <div class="workspace-grid">
+          <section class="upload-card" id="uploadCard">
+            <div class="section-number">01</div>
+            <div>
+              <p class="mini-label">CHOOSE A DOCUMENT</p>
+              <h2>What are we reading?</h2>
+            </div>
+            <label class="drop-zone" id="dropZone" for="fileInput">
+              <input id="fileInput" type="file" accept="application/pdf,.pdf" />
+              <span class="file-icon">PDF</span>
+              <strong id="dropTitle">Drop your PDF here</strong>
+              <span id="dropSubtitle">or click to browse · PDF files only</span>
+            </label>
+            <p class="form-error" id="uploadError" role="alert"></p>
+            <button class="primary-button" id="uploadButton" type="button" disabled><span>Summarize document</span><span aria-hidden="true">→</span></button>
+          </section>
+
+          <section class="progress-card empty" id="progressCard">
+            <div class="section-number">02</div>
+            <div class="progress-placeholder" id="progressPlaceholder">
+              <div class="orbit"><span></span></div>
+              <h2>Progress will appear here.</h2>
+              <p>Choose a PDF to begin. Each stage updates automatically after upload.</p>
+            </div>
+            <div class="hidden" id="progressContent">
+              <div class="status-heading">
+                <div><p class="mini-label">LIVE PIPELINE</p><h2 id="documentName">Processing document</h2></div>
+                <span class="status-pill" id="statusPill">Pending</span>
+              </div>
+              <div class="stage-list" id="stageList"></div>
+              <p class="status-note" id="statusNote">You can leave this page open—we’ll keep checking.</p>
+            </div>
+          </section>
+        </div>
+
+        <section class="summary-card hidden" id="summaryCard">
+          <div class="summary-header">
+            <div><p class="mini-label">YOUR SUMMARY</p><h2>The short version.</h2></div>
+            <button class="secondary-button" id="copyButton" type="button">Copy summary</button>
+          </div>
+          <div class="summary-content" id="summaryContent"></div>
+          <p class="email-note">A copy will also be sent to the email linked to your account.</p>
+        </section>
+      </section>
+    </main>
+    <footer><span>DOCFLOW</span><span>Long documents. Clear outcomes.</span></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js?v=2" defer></script>
+  </body>
+</html>
