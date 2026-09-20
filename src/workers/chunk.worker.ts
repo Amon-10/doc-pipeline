@@ -12,7 +12,7 @@ export const processChunkJob = async (job: Job<JobPayload>) => {
     const text = data.text;
     const jobId = data.jobId; // carries chunk jobId
 
-    try{
+    try {
         await startJobAttempt(job, jobId);
         // missing text means the extract worker's payload wasn't constructed correctly
         if (!text) {
@@ -55,14 +55,14 @@ export const processChunkJob = async (job: Job<JobPayload>) => {
 
         // mark the chunk job itself complete — separate from the summarize jobs it spawned
         await db.query(
-           `UPDATE jobs
+            `UPDATE jobs
             SET completed_at = now(),
             status = 'completed'
             WHERE id = $1`,
             [jobId]
         )
 
-    } catch(err) {
+    } catch (err) {
         await failJobAttempt(job, jobId, documentId, err);
         console.error(err);
 
@@ -71,4 +71,4 @@ export const processChunkJob = async (job: Job<JobPayload>) => {
 
 };
 
-if (process.env.NODE_ENV !== "test") new Worker("chunk", processChunkJob, {connection});
+if (process.env.NODE_ENV !== "test") new Worker("chunk", processChunkJob, { connection });

@@ -5,15 +5,15 @@ import { Worker, Job } from "bullmq";
 import { connection, addJob } from "../queues/pipeline.queue";
 import { failJobAttempt, startJobAttempt } from "./job-state";
 
-export const processSummarizeJob = async(job: Job<JobPayload>) => {
+export const processSummarizeJob = async (job: Job<JobPayload>) => {
 
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as SummarizeJobData;
     const chunk = data.chunk;
     const jobId = data.jobId; // summarize jobId
     const chunkIndex = data.chunkIndex;
-    
-    try{
+
+    try {
         await startJobAttempt(job, jobId);
         if (!chunk) {
             throw new Error(`No chunk provided for document ${documentId}`);
@@ -54,7 +54,7 @@ export const processSummarizeJob = async(job: Job<JobPayload>) => {
             [documentId]
         )
         const totalSummaries = Number(summariesResult.rows[0].count);
-        
+
         if (totalChunks === totalSummaries) {
             const mergeJobRecord = await db.query(
                 `INSERT INTO jobs (document_id, job_type, status)
@@ -81,7 +81,7 @@ export const processSummarizeJob = async(job: Job<JobPayload>) => {
             [jobId]
         );
 
-    } catch(err) {
+    } catch (err) {
         await failJobAttempt(job, jobId, documentId, err);
         console.error(err);
 
@@ -93,4 +93,4 @@ export const processSummarizeJob = async(job: Job<JobPayload>) => {
 };
 
 if (process.env.NODE_ENV !== "test") new Worker("summarize", processSummarizeJob,
-  {connection, concurrency: 5, limiter: { max: 5, duration: 1000 }});
+    { connection, concurrency: 5, limiter: { max: 5, duration: 1000 } });

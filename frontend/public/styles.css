@@ -1,13 +1,13 @@
 :root {
-  --ink: #14231f;
-  --muted: #68736e;
-  --paper: #f4f0e8;
-  --white: #fffdf8;
-  --coral: #f36f52;
-  --mint: #b8d8c7;
-  --line: #d9d5cb;
-  --success: #2d7657;
-  --error: #a33d2a;
+    --ink: #14231f;
+    --muted: #68736e;
+    --paper: #f4f0e8;
+    --white: #fffdf8;
+    --coral: #f36f52;
+    --mint: #b8d8c7;
+    --line: #d9d5cb;
+    --success: #2d7657;
+    --error: #a33d2a;
 }
 
 * { box-sizing: border-box; }
@@ -88,21 +88,21 @@ footer { min-height: 60px; border-top: 1px solid var(--line); padding: 0 clamp(2
 .toast.visible { transform: translateY(0); opacity: 1; }
 @keyframes pulse { 50% { transform: scale(.82); opacity: .65; } }
 @media (max-width: 820px) {
-  .auth-shell, .workspace-grid { grid-template-columns: 1fr; }
-  .auth-shell { padding-top: 48px; }
-  .hero-copy h1 { font-size: clamp(50px, 16vw, 75px); }
-  .promise-list { display: none; }
-  .workspace-grid { gap: 16px; }
-  .user-email { display: none; }
+    .auth-shell, .workspace-grid { grid-template-columns: 1fr; }
+    .auth-shell { padding-top: 48px; }
+    .hero-copy h1 { font-size: clamp(50px, 16vw, 75px); }
+    .promise-list { display: none; }
+    .workspace-grid { gap: 16px; }
+    .user-email { display: none; }
 }
 @media (max-width: 520px) {
-  .site-header { height: 70px; }
-  .auth-shell, .app-shell { width: min(100% - 28px, 1200px); }
-  .auth-shell { padding: 38px 0 65px; gap: 35px; }
-  .hero-description { font-size: 16px; }
-  .auth-card { padding: 25px 20px; box-shadow: 7px 7px 0 var(--mint); }
-  .app-shell { padding: 48px 0 70px; }
-  .status-heading, .summary-header { flex-direction: column; }
-  footer { padding: 18px 20px; gap: 20px; }
+    .site-header { height: 70px; }
+    .auth-shell, .app-shell { width: min(100% - 28px, 1200px); }
+    .auth-shell { padding: 38px 0 65px; gap: 35px; }
+    .hero-description { font-size: 16px; }
+    .auth-card { padding: 25px 20px; box-shadow: 7px 7px 0 var(--mint); }
+    .app-shell { padding: 48px 0 70px; }
+    .status-heading, .summary-header { flex-direction: column; }
+    footer { padding: 18px 20px; gap: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

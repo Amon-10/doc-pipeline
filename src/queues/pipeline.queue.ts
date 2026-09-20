@@ -6,9 +6,9 @@ import { Queue } from "bullmq";
  * since this connects to Redis from inside the app container.
  */
 export const connection = {
-  host: process.env.REDIS_HOST || "redis",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
-  password: process.env.REDIS_PASSWORD || undefined,
+    host: process.env.REDIS_HOST || "redis",
+    port: parseInt(process.env.REDIS_PORT || "6379"),
+    password: process.env.REDIS_PASSWORD || undefined,
 };
 
 /**
@@ -16,26 +16,26 @@ export const connection = {
  * Restricting to this union prevents typos like "extrct" from compiling.
  */
 export type JobType =
-  | "extract"
-  | "chunk"
-  | "summarize"
-  | "merge"
-  | "notify";
+    | "extract"
+    | "chunk"
+    | "summarize"
+    | "merge"
+    | "notify";
 
 // one dedicated queue per job type — prevents workers from competing for jobs meant for a different stage
 const queues: Record<JobType, Queue> = {
-  extract: new Queue("extract", { connection }),
-  chunk: new Queue("chunk", { connection }),
-  summarize: new Queue("summarize", { connection }),
-  merge: new Queue("merge", { connection }),
-  notify: new Queue("notify", { connection }),
+    extract: new Queue("extract", { connection }),
+    chunk: new Queue("chunk", { connection }),
+    summarize: new Queue("summarize", { connection }),
+    merge: new Queue("merge", { connection }),
+    notify: new Queue("notify", { connection }),
 };
 
 /** Exposed for operational checks and integration-test queue assertions. */
 export const getQueue = (jobType: JobType): Queue => queues[jobType];
 
 export const closeQueues = async (): Promise<void> => {
-  await Promise.all(Object.values(queues).map((queue) => queue.close()));
+    await Promise.all(Object.values(queues).map((queue) => queue.close()));
 };
 
 /**
@@ -49,37 +49,37 @@ export const closeQueues = async (): Promise<void> => {
  * unknown forces a type check before use, unlike any which disables checking entirely.
  */
 export interface JobPayload {
-  documentId: string;
-  jobType: JobType;
-  data?: Record<string, unknown>;
+    documentId: string;
+    jobType: JobType;
+    data?: Record<string, unknown>;
 }
 
 /** Shape of job.data.data for extract jobs. */
 export interface ExtractJobData {
-  filename: string;
-  jobId: string;
+    filename: string;
+    jobId: string;
 }
 
 /** Shape of job.data.data for chunk jobs. */
 export interface ChunkJobData {
-  text: string;
-  jobId: string
+    text: string;
+    jobId: string
 }
 
 /** Shape of job.data.data for summarize jobs. */
 export interface SummarizeJobData {
-  chunk: string;
-  jobId: string;
-  chunkIndex: number;
+    chunk: string;
+    jobId: string;
+    chunkIndex: number;
 }
 
 export interface MergeJobData {
-  jobId: string;
+    jobId: string;
 }
 
 export interface NotifyJobData {
-  jobId: string;
-  summary: string;
+    jobId: string;
+    summary: string;
 }
 
 /**
@@ -92,12 +92,12 @@ export interface NotifyJobData {
  * giving external services like OpenAI room to recover from rate limits.
  */
 export const addJob = async (payload: JobPayload) => {
-  const queue = queues[payload.jobType];
-  await queue.add(payload.jobType, payload, {
-    attempts: 3,
-    backoff: {
-      type: "exponential",
-      delay: 2000,
-    },
-  });
+    const queue = queues[payload.jobType];
+    await queue.add(payload.jobType, payload, {
+        attempts: 3,
+        backoff: {
+            type: "exponential",
+            delay: 2000,
+        },
+    });
 };

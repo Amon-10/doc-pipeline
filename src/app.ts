@@ -14,7 +14,7 @@ export const app = express();
 app.use(express.json());
 
 app.get("/", (_req, res) => {
-  res.json({ message: "Doc pipeline API", status: "ok" });
+    res.json({ message: "Doc pipeline API", status: "ok" });
 });
 
 app.use("/", authRoutes);
@@ -22,9 +22,9 @@ app.use("/upload", requireAuth, uploadLimiter, uploadRouter);
 app.use("/status", requireAuth, statusRouter);
 
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+    res.json({ status: "ok" });
 });
 
 app.use((req: Request, res: Response) => {
-  res.status(404).json({ error: `Cannot ${req.method} ${req.path}` });
+    res.status(404).json({ error: `Cannot ${req.method} ${req.path}` });
 });

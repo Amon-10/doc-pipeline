@@ -7,7 +7,7 @@ import { Pool } from "pg";
  * connectionString is read from environment so credentials never live in code.
  */
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL,
 });
 
 /**
@@ -16,8 +16,8 @@ const pool = new Pool({
  * crashing cleanly and restarting is safer than continuing with a bad connection.
  */
 pool.on("error", (err) => {
-  console.error("Unexpected Postgres error:", err);
-  process.exit(1);
+    console.error("Unexpected Postgres error:", err);
+    process.exit(1);
 });
 
 /**
@@ -29,6 +29,6 @@ pool.on("error", (err) => {
  * @param params - values that replace placeholders, preventing SQL injection
  */
 export const db = {
-  query: (text: string, params?: unknown[]) => pool.query(text, params),
-  close: () => pool.end(),
+    query: (text: string, params?: unknown[]) => pool.query(text, params),
+    close: () => pool.end(),
 };

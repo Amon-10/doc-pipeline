@@ -26,10 +26,10 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     const token = authHeader.split(' ')[1];
 
     if (token == null) {
-        res.status(401).json({error: 'token is null'});
+        res.status(401).json({ error: 'token is null' });
         return;
     }
-    
+
     try {
         const authPayload = jwt.verify(token, jwt_secret) as { userId: string };
         req.userId = authPayload.userId;

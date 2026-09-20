@@ -11,32 +11,32 @@
  * @returns array of text chunks, each ending on a complete sentence
  */
 export function chunkText(text: string, wordsPerChunk: number = 500): string[] {
-  if (!text.trim()) return [];
-  
-  // split on sentence-ending punctuation followed by whitespace
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  const chunks: string[] = [];
-  let currentChunk: string[] = [];
-  let wordCount = 0;
+    if (!text.trim()) return [];
 
-  for (const sentence of sentences) {
-    const sentenceWordCount = sentence.split(/\s+/).length;
+    // split on sentence-ending punctuation followed by whitespace
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    const chunks: string[] = [];
+    let currentChunk: string[] = [];
+    let wordCount = 0;
 
-    // start a new chunk once adding this sentence would exceed the target size
-    if (wordCount + sentenceWordCount > wordsPerChunk && currentChunk.length > 0) {
-      chunks.push(currentChunk.join(" "));
-      currentChunk = [];
-      wordCount = 0;
+    for (const sentence of sentences) {
+        const sentenceWordCount = sentence.split(/\s+/).length;
+
+        // start a new chunk once adding this sentence would exceed the target size
+        if (wordCount + sentenceWordCount > wordsPerChunk && currentChunk.length > 0) {
+            chunks.push(currentChunk.join(" "));
+            currentChunk = [];
+            wordCount = 0;
+        }
+
+        currentChunk.push(sentence);
+        wordCount += sentenceWordCount;
     }
 
-    currentChunk.push(sentence);
-    wordCount += sentenceWordCount;
-  }
+    // push whatever's left as the final chunk
+    if (currentChunk.length > 0) {
+        chunks.push(currentChunk.join(" "));
+    }
 
-  // push whatever's left as the final chunk
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk.join(" "));
-  }
-
-  return chunks;
+    return chunks;
 }

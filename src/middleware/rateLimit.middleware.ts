@@ -8,12 +8,12 @@ import { Request } from "express";
  * back to IP only in the unlikely case req.userId isn't set.
  */
 export const uploadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 uploads per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req: Request) => req.userId || ipKeyGenerator(req.ip || "unknown"),
-  message: { error: "Too many uploads. Please wait before uploading again." },
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 uploads per window
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: Request) => req.userId || ipKeyGenerator(req.ip || "unknown"),
+    message: { error: "Too many uploads. Please wait before uploading again." },
 });
 
 /**
@@ -22,9 +22,9 @@ export const uploadLimiter = rateLimit({
  * brute-force password guessing and account enumeration.
  */
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many attempts. Please try again later." },
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many attempts. Please try again later." },
 });

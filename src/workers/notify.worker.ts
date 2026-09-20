@@ -41,7 +41,7 @@ export const processNotifyJob = async (job: Job<JobPayload>) => {
         );
         console.log("Document notification sent", { documentId, jobId });
 
-    }catch(err) {
+    } catch (err) {
         await failJobAttempt(job, jobId, documentId, err);
         console.error(err);
 
@@ -49,4 +49,4 @@ export const processNotifyJob = async (job: Job<JobPayload>) => {
     }
 };
 
-if (process.env.NODE_ENV !== "test") new Worker("notify", processNotifyJob, {connection});
+if (process.env.NODE_ENV !== "test") new Worker("notify", processNotifyJob, { connection });

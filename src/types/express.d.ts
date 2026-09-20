@@ -7,9 +7,9 @@ import "express";
  * not just in files that happen to redefine it locally.
  */
 declare global {
-  namespace Express {
-    interface Request {
-      userId?: string;
+    namespace Express {
+        interface Request {
+            userId?: string;
+        }
     }
-  }
 }

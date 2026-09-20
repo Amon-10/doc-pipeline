@@ -23,18 +23,18 @@ export const createExtractJobProcessor = (parsePdf: PdfParser = pdfParse) => asy
         await startJobAttempt(job, jobId);
         // check for if filename isn't found - may indicate payload wasn't constructed correctly
         // throw error so BullMQ retries
-        if(!filename) {
+        if (!filename) {
             throw new Error(`No filename provided for document ${documentId}`)
         }
 
         // Update status to processing in documents table
         await db.query(
-           `UPDATE documents
+            `UPDATE documents
             SET status = 'processing'
             WHERE id = $1`,
             [documentId]
         );
-        
+
         // Read file from disk
         const filePath = path.join("uploads", filename); // create path to pdf on disk
         const fileBuffer = await fs.readFile(filePath); // extract binary pdf contents
@@ -66,17 +66,17 @@ export const createExtractJobProcessor = (parsePdf: PdfParser = pdfParse) => asy
 
         // Update jobs table to signify extract job is completed and when it was completed
         await db.query(
-           `UPDATE jobs
+            `UPDATE jobs
             SET completed_at = now(),
             status = 'completed'
             WHERE id = $1`,
             [jobId]
         )
-    
-    } catch(err) {
+
+    } catch (err) {
         await failJobAttempt(job, jobId, documentId, err);
         console.error(err);
-        
+
         // Rethrow so BullMQ triggers retry
         throw err;
     }
@@ -85,9 +85,9 @@ export const createExtractJobProcessor = (parsePdf: PdfParser = pdfParse) => asy
 export const processExtractJob = createExtractJobProcessor();
 
 if (process.env.NODE_ENV !== "test") new Worker("extract", processExtractJob,
-/**
- * Passing {connection: connection} as {connection}
- * typescript shortform
- * basically results in connection: {host: "redis", port: 6379}
- */
-{connection} );
+    /**
+     * Passing {connection: connection} as {connection}
+     * typescript shortform
+     * basically results in connection: {host: "redis", port: 6379}
+     */
+    { connection });

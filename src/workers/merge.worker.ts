@@ -9,7 +9,7 @@ export const processMergeJob = async (job: Job<JobPayload>) => {
     const documentId = job.data.documentId;
     const data = job.data.data as unknown as MergeJobData;
     const jobId = data.jobId; // merge jobId
-    
+
     try {
         await startJobAttempt(job, jobId);
         // gather every chunk's summary in original order so the synthesized
@@ -24,7 +24,7 @@ export const processMergeJob = async (job: Job<JobPayload>) => {
         const combinedText = summariesResult.rows
             .map(row => row.content)
             .join(' ');
-        
+
         // reduce step of the pipeline — synthesizes N parallel chunk
         // summaries (the map step, done in summarize worker) into one
         // Get final coherent merged summary
@@ -72,7 +72,7 @@ export const processMergeJob = async (job: Job<JobPayload>) => {
         );
         console.log("Document processing completed", { documentId, jobId });
 
-    } catch(err) {
+    } catch (err) {
         await failJobAttempt(job, jobId, documentId, err);
         console.error(err);
 
@@ -80,4 +80,4 @@ export const processMergeJob = async (job: Job<JobPayload>) => {
     }
 };
 
-if (process.env.NODE_ENV !== "test") new Worker("merge", processMergeJob, {connection});
+if (process.env.NODE_ENV !== "test") new Worker("merge", processMergeJob, { connection });
