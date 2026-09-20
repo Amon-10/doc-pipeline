@@ -63,14 +63,15 @@ export const processMergeJob = async (job: Job<JobPayload>) => {
         );
 
         // document processing is done
-        await db.query(
+        const completedDocument = await db.query(
             `UPDATE documents
             SET status = 'done',
             completed_at = now()
-            WHERE id = $1`,
+            WHERE id = $1
+            RETURNING user_id`,
             [documentId]
         );
-        console.log("Document processing completed", { documentId, jobId });
+        console.log("Document processing completed", { documentId, userId: completedDocument.rows[0].user_id });
 
     } catch (err) {
         await failJobAttempt(job, jobId, documentId, err);

@@ -20,10 +20,11 @@ export const processNotifyJob = async (job: Job<JobPayload>) => {
 
         /** Get user email */
         const documentsResult = await db.query(
-            `SELECT users.email FROM documents JOIN users ON documents.user_id = users.id WHERE documents.id = $1`,
+            `SELECT documents.user_id, users.email FROM documents JOIN users ON documents.user_id = users.id WHERE documents.id = $1`,
             [documentId]
         );
         const email = documentsResult.rows[0].email;
+        const userId = documentsResult.rows[0].user_id;
 
         if (!email) {
             throw new Error(`No email provided for document ${documentId}`);
@@ -39,7 +40,7 @@ export const processNotifyJob = async (job: Job<JobPayload>) => {
             WHERE id = $1`,
             [jobId]
         );
-        console.log("Document notification sent", { documentId, jobId });
+        console.log("Document notification sent", { documentId, userId });
 
     } catch (err) {
         await failJobAttempt(job, jobId, documentId, err);

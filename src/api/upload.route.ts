@@ -96,6 +96,7 @@ router.post("/", upload.single('file'), async (req: Request, res: Response) => {
             jobType: "extract",
             data: { filename: document.filename, jobId },
         });
+        console.log("Document uploaded", { documentId: document.id, userId: document.user_id });
 
         // Return success message
         res.status(201).json({
