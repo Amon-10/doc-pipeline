@@ -84,14 +84,36 @@ describe("processing pipeline integration", () => {
       documentId: document.id,
       jobType: "summarize",
       data: { chunk: "", jobId: summarizeJob.id, chunkIndex: 0 },
-    }))).rejects.toThrow("No chunk provided");
+    }, 2))).rejects.toThrow("No chunk provided");
 
-    const failedJob = (await db.query("SELECT status, error, completed_at FROM jobs WHERE id = $1", [summarizeJob.id])).rows[0];
+    const failedJob = (await db.query("SELECT status, attempt_count, error, completed_at FROM jobs WHERE id = $1", [summarizeJob.id])).rows[0];
     expect(failedJob.status).toBe("failed");
+    expect(failedJob.attempt_count).toBe(3);
     expect(failedJob.error).toContain("No chunk provided");
     expect(failedJob.completed_at).toBeNull();
     const failedDocument = (await db.query("SELECT status, completed_at FROM documents WHERE id = $1", [document.id])).rows[0];
     expect(failedDocument).toMatchObject({ status: "failed", completed_at: null });
     expect(await getQueue("notify").getWaitingCount()).toBe(0);
+  });
+
+  it("keeps a document processing while a failed attempt is retried", async () => {
+    const { document } = await createUserAndDocument();
+    const summarizeJob = await createJob(document.id, "summarize");
+    const payload = {
+      documentId: document.id,
+      jobType: "summarize" as const,
+      data: { chunk: "Some text", jobId: summarizeJob.id, chunkIndex: 0 },
+    };
+    ai.summarizeChunk.mockRejectedValueOnce(new Error("Temporary provider error"));
+
+    await expect(processSummarizeJob(fakeJob(payload))).rejects.toThrow("Temporary provider error");
+    expect((await db.query("SELECT status, attempt_count, error FROM jobs WHERE id = $1", [summarizeJob.id])).rows[0])
+      .toMatchObject({ status: "retrying", attempt_count: 1, error: "Temporary provider error" });
+    expect((await db.query("SELECT status FROM documents WHERE id = $1", [document.id])).rows[0].status).toBe("processing");
+
+    await processSummarizeJob(fakeJob(payload, 1));
+    expect((await db.query("SELECT status, attempt_count, error FROM jobs WHERE id = $1", [summarizeJob.id])).rows[0])
+      .toMatchObject({ status: "completed", attempt_count: 2, error: null });
+    expect((await db.query("SELECT status FROM documents WHERE id = $1", [document.id])).rows[0].status).toBe("processing");
   });
 });

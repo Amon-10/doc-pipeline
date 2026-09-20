@@ -34,8 +34,8 @@ export async function login(baseUrl: string, email: string, password = "password
   return body.token;
 }
 
-export function fakeJob(payload: JobPayload): Job<JobPayload> {
-  return { data: payload } as Job<JobPayload>;
+export function fakeJob(payload: JobPayload, attemptsMade = 0): Job<JobPayload> {
+  return { data: payload, attemptsMade, opts: { attempts: 3 } } as Job<JobPayload>;
 }
 
 export async function createUserAndDocument(email = "owner@example.com") {

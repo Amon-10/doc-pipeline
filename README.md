@@ -105,7 +105,7 @@ The tricky part is the **fan-in**: only one `merge` job should ever run per docu
 
 ### Retry strategy
 
-Every job gets up to 3 attempts with exponential backoff (2s → 4s → 8s), configured once in a single `addJob` function that every part of the app funnels through. This matters most for the `summarize` stage, which depends on an external API — retrying immediately after a rate limit would just get rate limited again; backing off gives OpenAI room to recover.
+Every job gets up to 3 total attempts with exponential backoff between retries (2s → 4s), configured once in a single `addJob` function that every part of the app funnels through. This matters most for the `summarize` stage, which depends on an external API — retrying immediately after a rate limit would just get rate limited again; backing off gives OpenAI room to recover.
 
 ## Database schema
 

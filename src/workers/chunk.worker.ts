@@ -3,6 +3,7 @@ import { addJob, connection } from "../queues/pipeline.queue";
 import type { ChunkJobData, JobPayload } from "../queues/pipeline.queue";
 import { db } from "../db/client";
 import { chunkText } from "../lib/chunking";
+import { failJobAttempt, startJobAttempt } from "./job-state";
 
 export const processChunkJob = async (job: Job<JobPayload>) => {
 
@@ -12,6 +13,7 @@ export const processChunkJob = async (job: Job<JobPayload>) => {
     const jobId = data.jobId; // carries chunk jobId
 
     try{
+        await startJobAttempt(job, jobId);
         // missing text means the extract worker's payload wasn't constructed correctly
         if (!text) {
             throw new Error(`No text provided for document ${documentId}`)
@@ -61,20 +63,7 @@ export const processChunkJob = async (job: Job<JobPayload>) => {
         )
 
     } catch(err) {
-        await db.query(
-           `UPDATE documents
-            SET status = 'failed'
-            WHERE id = $1`,
-            [documentId]
-        );
-
-        await db.query(
-           `UPDATE jobs
-            SET status = 'failed',
-            error = $2
-            WHERE id = $1`,
-            [jobId, err instanceof Error ? err.message : 'Unknown error']
-        );
+        await failJobAttempt(job, jobId, documentId, err);
         console.error(err);
 
         throw err; // rethrow so BullMQ triggers retry

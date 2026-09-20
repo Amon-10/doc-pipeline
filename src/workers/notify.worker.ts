@@ -3,6 +3,7 @@ import type { NotifyJobData, JobPayload } from "../queues/pipeline.queue";
 import { Worker, Job } from "bullmq";
 import { connection } from "../queues/pipeline.queue";
 import { sendSummaryEmail } from "../lib/mailer";
+import { failJobAttempt, startJobAttempt } from "./job-state";
 
 export const processNotifyJob = async (job: Job<JobPayload>) => {
     const documentId = job.data.documentId;
@@ -11,6 +12,7 @@ export const processNotifyJob = async (job: Job<JobPayload>) => {
     const jobId = data.jobId; // notify jobId
 
     try {
+        await startJobAttempt(job, jobId);
         // check summary - missing summary means the merge worker's payload wasn't constructed correctly
         if (!summary) {
             throw new Error(`No summary provided for document ${documentId}`);
@@ -37,15 +39,10 @@ export const processNotifyJob = async (job: Job<JobPayload>) => {
             WHERE id = $1`,
             [jobId]
         );
+        console.log("Document notification sent", { documentId, jobId });
 
     }catch(err) {
-        await db.query(
-           `UPDATE jobs
-            SET status = 'failed',
-            error = $2
-            WHERE id = $1`,
-            [jobId, err instanceof Error ? err.message : 'Unknown error']
-        );
+        await failJobAttempt(job, jobId, documentId, err);
         console.error(err);
 
         throw err; // rethrow so BullMQ triggers retry

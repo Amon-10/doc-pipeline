@@ -3,6 +3,7 @@ import type { MergeJobData, JobPayload } from "../queues/pipeline.queue";
 import { Worker, Job } from "bullmq";
 import { connection, addJob } from "../queues/pipeline.queue";
 import { mergeSummaries } from "../lib/openai";
+import { failJobAttempt, startJobAttempt } from "./job-state";
 
 export const processMergeJob = async (job: Job<JobPayload>) => {
     const documentId = job.data.documentId;
@@ -10,6 +11,7 @@ export const processMergeJob = async (job: Job<JobPayload>) => {
     const jobId = data.jobId; // merge jobId
     
     try {
+        await startJobAttempt(job, jobId);
         // gather every chunk's summary in original order so the synthesized
         // result reads coherently rather than jumbled
         const summariesResult = await db.query(
@@ -68,22 +70,10 @@ export const processMergeJob = async (job: Job<JobPayload>) => {
             WHERE id = $1`,
             [documentId]
         );
+        console.log("Document processing completed", { documentId, jobId });
 
     } catch(err) {
-        await db.query(
-           `UPDATE documents
-            SET status = 'failed'
-            WHERE id = $1`,
-            [documentId]
-        );
-
-        await db.query(
-           `UPDATE jobs
-            SET status = 'failed',
-            error = $2
-            WHERE id = $1`,
-            [jobId, err instanceof Error ? err.message : 'Unknown error']
-        );
+        await failJobAttempt(job, jobId, documentId, err);
         console.error(err);
 
         throw err; // rethrow so BullMQ triggers retry

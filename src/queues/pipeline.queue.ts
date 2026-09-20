@@ -87,8 +87,8 @@ export interface NotifyJobData {
  *
  * @param payload - job data matching the JobPayload shape
  *
- * Retries failed jobs up to 3 times with exponential backoff —
- * the wait between retries doubles each time (2s, 4s, 8s),
+ * Allows up to 3 total attempts (2 retries) with exponential backoff —
+ * the wait between retries doubles each time (2s, 4s),
  * giving external services like OpenAI room to recover from rate limits.
  */
 export const addJob = async (payload: JobPayload) => {

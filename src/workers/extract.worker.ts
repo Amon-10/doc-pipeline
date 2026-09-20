@@ -4,6 +4,7 @@ import path from "path";
 import { db } from "../db/client";
 import { addJob, connection } from "../queues/pipeline.queue";
 import type { ExtractJobData, JobPayload } from "../queues/pipeline.queue";
+import { failJobAttempt, startJobAttempt } from "./job-state";
 type PdfParser = (buffer: Buffer) => Promise<{ text: string }>;
 
 // pdf-parse exposes a CommonJS function. Keep require() here because using a
@@ -19,6 +20,7 @@ export const createExtractJobProcessor = (parsePdf: PdfParser = pdfParse) => asy
     const jobId = data.jobId; // carries extract jobId
 
     try {
+        await startJobAttempt(job, jobId);
         // check for if filename isn't found - may indicate payload wasn't constructed correctly
         // throw error so BullMQ retries
         if(!filename) {
@@ -72,24 +74,7 @@ export const createExtractJobProcessor = (parsePdf: PdfParser = pdfParse) => asy
         )
     
     } catch(err) {
-        /**
-         * Upon error update documents table to failed for row
-         */
-        await db.query(
-           `UPDATE documents
-            SET status = 'failed'
-            WHERE id = $1`,
-            [documentId]
-        );
-        
-        // Upon error update jobs table to failed for job row
-        await db.query(
-           `UPDATE jobs
-            SET status = 'failed',
-            error = $2
-            WHERE id = $1`,
-            [jobId, err instanceof Error ? err.message : 'Unknown error']
-        );
+        await failJobAttempt(job, jobId, documentId, err);
         console.error(err);
         
         // Rethrow so BullMQ triggers retry

@@ -193,13 +193,14 @@ function renderStages(jobs) {
     const matches = jobs.filter((job) => job.job_type === name);
     const failed = matches.some((job) => job.status === "failed");
     const complete = matches.length > 0 && matches.every((job) => job.status === "completed");
+    const retrying = matches.some((job) => job.status === "retrying");
     const active = matches.some((job) => ["active", "processing"].includes(job.status));
     const waiting = !matches.length || matches.every((job) => ["pending", "waiting", "delayed"].includes(job.status));
-    const css = failed ? "failed" : complete ? "complete" : active ? "active" : "";
+    const css = failed ? "failed" : complete ? "complete" : retrying || active ? "active" : "";
     const icon = failed ? "!" : complete ? "✓" : "";
     const detail = name === "summarize" && matches.length > 1
-      ? `${matches.filter((job) => job.status === "completed").length}/${matches.length} complete`
-      : failed ? "failed" : complete ? "complete" : active ? "in progress" : waiting ? "waiting" : (matches[0]?.status || "waiting");
+      ? `${matches.filter((job) => job.status === "completed").length}/${matches.length} complete${retrying ? " · retrying" : ""}`
+      : failed ? "failed" : complete ? "complete" : retrying ? "retrying" : active ? "in progress" : waiting ? "waiting" : (matches[0]?.status || "waiting");
     return `<div class="stage ${css}"><span class="stage-dot">${icon}</span><span class="stage-name">${labels[name]}</span><span class="stage-state">${detail}</span></div>`;
   }).join("");
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "../../src/db/client";
 import { createJob, createUserAndDocument, fakeJob } from "./helpers";
 
@@ -12,6 +12,8 @@ vi.mock("resend", () => ({
 import { processNotifyJob } from "../../src/workers/notify.worker";
 
 describe("email notification integration", () => {
+  beforeEach(() => resendSend.mockClear());
+
   it("uses Resend with the owner's email, EMAIL_FROM, and completed summary", async () => {
     const { user, document } = await createUserAndDocument("recipient@example.com");
     const notifyJob = await createJob(document.id, "notify");
@@ -33,5 +35,26 @@ describe("email notification integration", () => {
     });
     expect((await db.query("SELECT status, completed_at FROM jobs WHERE id = $1", [notifyJob.id])).rows[0])
       .toMatchObject({ status: "completed" });
+  });
+
+  it("keeps email delivery retrying without failing a completed document", async () => {
+    const { document } = await createUserAndDocument();
+    await db.query("UPDATE documents SET status = 'done' WHERE id = $1", [document.id]);
+    const notifyJob = await createJob(document.id, "notify");
+    const payload = {
+      documentId: document.id,
+      jobType: "notify" as const,
+      data: { jobId: notifyJob.id, summary: "Summary" },
+    };
+    resendSend.mockRejectedValueOnce(new Error("Temporary email error"));
+
+    await expect(processNotifyJob(fakeJob(payload))).rejects.toThrow("Temporary email error");
+    expect((await db.query("SELECT status, attempt_count FROM jobs WHERE id = $1", [notifyJob.id])).rows[0])
+      .toMatchObject({ status: "retrying", attempt_count: 1 });
+    expect((await db.query("SELECT status FROM documents WHERE id = $1", [document.id])).rows[0].status).toBe("done");
+
+    await processNotifyJob(fakeJob(payload, 1));
+    expect((await db.query("SELECT status, attempt_count, error FROM jobs WHERE id = $1", [notifyJob.id])).rows[0])
+      .toMatchObject({ status: "completed", attempt_count: 2, error: null });
   });
 });

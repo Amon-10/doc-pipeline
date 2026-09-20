@@ -1,0 +1,44 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const client_1 = require("../db/client");
+const router = (0, express_1.Router)();
+/**
+ * GET /status/:documentId
+ * Returns a document's overall status plus the status of every job
+ * associated with it, so a client can poll progress after uploading.
+ */
+router.get("/:documentId", async (req, res) => {
+    try {
+        const { documentId } = req.params;
+        const documentResult = await client_1.db.query(`SELECT id, status, user_id, filename, created_at, completed_at
+            FROM documents
+            WHERE id = $1 AND user_id = $2`, [documentId, req.userId]);
+        // 404 — the resource itself doesn't exist, distinct from a bad
+        // request (400) or a server error (500)
+        if (documentResult.rows.length === 0) {
+            res.status(404).json({ error: "Document not found" });
+            return;
+        }
+        const document = documentResult.rows[0];
+        const jobsResult = await client_1.db.query(`SELECT id, job_type, status, attempt_count, error, created_at, completed_at
+            FROM jobs
+            WHERE document_id = $1
+            ORDER BY created_at`, [documentId]);
+        const summaryResult = await client_1.db.query(`SELECT content
+            FROM summaries
+            WHERE document_id = $1 AND chunk_index IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1`, [documentId]);
+        res.status(200).json({
+            document,
+            jobs: jobsResult.rows,
+            summary: summaryResult.rows[0]?.content ?? null,
+        });
+    }
+    catch (error) {
+        console.error("Status check failed", error);
+        res.status(500).json({ error: "Failed to retrieve status" });
+    }
+});
+exports.default = router;
