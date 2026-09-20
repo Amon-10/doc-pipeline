@@ -1,5 +1,7 @@
 # doc-pipeline
 
+[![CI](https://github.com/Amon-10/doc-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Amon-10/doc-pipeline/actions/workflows/ci.yml)
+
 An asynchronous document processing pipeline that ingests PDFs, summarizes them using a distributed job queue, and emails the result — built to demonstrate backend infrastructure patterns: job queues, fan-out/fan-in parallelism, retry logic, stateful pipeline orchestration, and authenticated, per-user access control.
 
 ## Try it
