@@ -8,7 +8,7 @@ An asynchronous document processing pipeline that ingests PDFs, summarizes them 
 
 - **[Open the live app](https://docpipeline.devamon.com)** — the easiest way to try the project. Create an account, upload a PDF, follow its progress, and read the resulting summary.
 - **[Open the API](https://api.docpipeline.devamon.com)** — the backend service itself. This returns JSON and is primarily useful to engineers or API clients.
-- **[Check API health](https://api.docpipeline.devamon.com/health)** — a simple endpoint confirming that the backend is online.
+- **[Check API health](https://api.docpipeline.devamon.com/health)** — checks Postgres, Redis, and access to the processing queues.
 
 The live app is the best starting point for anyone who wants to experience the project without using an API client. The API link is provided separately for engineers who want to inspect the backend service directly.
 
@@ -130,7 +130,7 @@ Splitting `documents.status` from individual `jobs.status` was a deliberate choi
 
 **`GET /status/:documentId`** — requires `Authorization: Bearer <token>`. Returns the document's current status plus every job associated with it, scoped to documents owned by the authenticated user.
 
-**`GET /health`** — basic liveness check, unauthenticated.
+**`GET /health`** — unauthenticated dependency check for Postgres, Redis, and each processing queue. Returns HTTP 200 when all checks pass, or 503 if any check fails. Queue checks confirm Redis access, not that workers are actively processing jobs.
 
 ## Running locally
 

@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import uploadRouter from "./api/upload.route";
 import statusRouter from "./api/status.route";
+import healthRouter from "./api/health.route";
 import requireAuth from "./auth/middleware/auth.middleware";
 import authRoutes from "./auth/route/auth.route";
 import { uploadLimiter } from "./middleware/rateLimit.middleware";
@@ -20,10 +21,7 @@ app.get("/", (_req, res) => {
 app.use("/", authRoutes);
 app.use("/upload", requireAuth, uploadLimiter, uploadRouter);
 app.use("/status", requireAuth, statusRouter);
-
-app.get("/health", (_req, res) => {
-    res.json({ status: "ok" });
-});
+app.use("/health", healthRouter);
 
 app.use((req: Request, res: Response) => {
     res.status(404).json({ error: `Cannot ${req.method} ${req.path}` });
