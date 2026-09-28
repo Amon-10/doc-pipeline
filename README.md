@@ -130,7 +130,26 @@ Splitting `documents.status` from individual `jobs.status` was a deliberate choi
 
 **`GET /status/:documentId`** — requires `Authorization: Bearer <token>`. Returns the document's current status plus every job associated with it, scoped to documents owned by the authenticated user.
 
-**`GET /health`** — unauthenticated dependency check for Postgres, Redis, and each processing queue. Returns HTTP 200 when all checks pass, or 503 if any check fails. Queue checks confirm Redis access, not that workers are actively processing jobs.
+**`GET /health`** — unauthenticated dependency check for Postgres, Redis, and the `extract`, `chunk`, `summarize`, `merge`, and `notify` queues. Each check has a 3-second timeout. The endpoint returns HTTP 200 when every check passes:
+
+```json
+{
+    "status": "ok",
+    "checks": {
+        "database": "ok",
+        "redis": "ok",
+        "queues": {
+            "extract": "ok",
+            "chunk": "ok",
+            "summarize": "ok",
+            "merge": "ok",
+            "notify": "ok"
+        }
+    }
+}
+```
+
+If a check fails or times out, its value is `"error"`, the top-level status is `"unhealthy"`, and the endpoint returns HTTP 503. Queue checks confirm that each queue is accessible through Redis; they do not confirm that workers are actively processing jobs.
 
 ## Running locally
 
@@ -181,6 +200,18 @@ npm test
 ```
 
 Integration tests recreate only the `pipeline_test` database schema and flush the dedicated test Redis instance. Override their locations with `TEST_DATABASE_URL`, `TEST_REDIS_HOST`, and `TEST_REDIS_PORT`; as a safety check, the database name must contain `test`. OpenAI and Resend are mocked by the suite, so tests never make provider calls or send email.
+
+### Continuous integration
+
+GitHub Actions runs the `CI` workflow for pushes and pull requests targeting `main`. The job uses Node.js 20 on Ubuntu with PostgreSQL 16 and Redis 7 service containers, then runs:
+
+```bash
+npm ci
+npm run build
+npm test
+```
+
+The workflow points the integration suite at the service containers through `TEST_DATABASE_URL`, `TEST_REDIS_HOST`, and `TEST_REDIS_PORT`. Its status is shown by the CI badge at the top of this README.
 
 ## Deployment notes
 
